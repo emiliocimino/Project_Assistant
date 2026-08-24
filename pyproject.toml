@@ -20,6 +20,7 @@ dependencies = [
     "pydantic>=2.13.3",
     "pydantic-ai-slim[mcp,openai]>=1.107.0",
     "pypdf>=6.10.2",
+    "pypdf2>=3.0.1",
     "python-dotenv>=1.2.2",
     "python-pptx>=1.0.2",
     "python-telegram-bot>=22.8",
