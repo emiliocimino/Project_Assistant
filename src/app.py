@@ -1,9 +1,6 @@
 """Gradio app for the Wiki Agent. Run with: uv run app.py
 
-Written against Gradio 6. The one change Gradio 6 forces on this file: `theme`,
-`css`, and `head` are no longer accepted by the gr.Blocks() constructor. They
-now live on .launch() instead. Everything else here (Timer, State with
-delete_callback, Chatbot in messages format) is unchanged in Gradio 6.
+Written against Gradio 6.
 """
 
 import asyncio
@@ -20,7 +17,7 @@ import styles
 
 # Adjust this import to match where WikiAgent actually lives in your project
 from src.wiki_agent import WikiAgent
-from src.memory.manager import list_threads, load_history
+from memory.manager import list_threads, load_history, delete_thread
 
 LAUNCH_STYLE = {"theme": styles.THEME, "css": styles.CSS, "head": styles.HEAD}
 
@@ -28,6 +25,13 @@ HEADER = """
 <div id="header">
     <div class="context-label">European Projects Office</div>
     <h1>EuroFMX Agent</h1>
+</div>
+"""
+
+EDIT_BANNER = """
+<div class="edit-banner">
+    <strong>Edit mode is active.</strong>
+    The AI can make mistakes and may create or modify wiki files directly from this chat.
 </div>
 """
 
@@ -92,8 +96,7 @@ async def resume_conversation(thread_id):
     the visible chat log from that thread's last checkpoint.
 
     Known gap: if that thread was left mid human-in-the-loop approval, this
-    does not detect or restore the pending-approval state. See the note above
-    list_threads/load_history in wiki_agent.py.
+    does not detect or restore the pending-approval state.
     """
     if not thread_id:
         return (
@@ -108,11 +111,21 @@ async def resume_conversation(thread_id):
     )
 
 
-async def ask(agent, message, history):
-    """Wired to the ChatInterface-style textbox; calls WikiAgent.ask."""
+async def send_message(agent, message, history, mode):
+    """Wired to the chat textbox/button. Which agent method gets called
+    depends on the mode switch: Ask mode is framed as read-only (agent.ask),
+    Edit mode allows the same box to create or update wiki files directly,
+    e.g. quick notes (agent.edit). Both still go through the same
+    HumanInTheLoopMiddleware for actual file edits/moves either way; the
+    difference is the success-criteria framing given to the model, not a
+    hard permission wall.
+    """
     if agent is None or not message:
         return history, gr.update(visible=False), agent, message
-    history = await agent.ask(message, history)
+    if mode == "Edit":
+        history = await agent.enrich(message, history)
+    else:
+        history = await agent.ask(message, history)
     paused = getattr(agent, "paused", False)
     return history, gr.update(visible=paused), agent, ""
 
@@ -131,33 +144,18 @@ def start_enrich_ui(pdf_file, history):
 
     Writes a visible "working on it" turn immediately and locks the ask box
     and upload control. Locking matters, not just cosmetics: ask() and
-    enrich() drive the same LangGraph thread_id, and letting a question fire
+    enrich() drive the same LangGraph thread_id, and letting a message fire
     into the graph while an enrich() run is mid-flight on the same thread is
     a race, not a supported concurrent use of the checkpointer.
     """
     if pdf_file is None:
         return history, gr.update(interactive=True), gr.update(interactive=True)
-    filename = os.path.basename(pdf_file)
-    history = history + [
-        {"role": "user", "content": f"Uploaded: {filename}"},
-        {
-            "role": "assistant",
-            "content": f"Reading **{filename}** and updating the wiki now. "
-                        f"This can take a few minutes for larger files.",
-        },
-    ]
+
     return history, gr.update(interactive=False), gr.update(interactive=False)
 
 
 async def enrich_file(agent, pdf_file, history):
-    """Runs the actual PDF processing and calls WikiAgent.enrich.
-
-    NOTE (fixed earlier): list_names.append used to sit inside the
-    `if not os.path.isfile` branch, so re-processing a file whose pages were
-    already extracted produced an empty list_names and called agent.enrich("").
-    The append now runs regardless of whether the page file was just written
-    or already existed.
-    """
+    """Runs the actual PDF processing and calls WikiAgent.enrich."""
     if agent is None or pdf_file is None:
         return history, gr.update(visible=False), agent
 
@@ -175,15 +173,10 @@ async def enrich_file(agent, pdf_file, history):
                     output.write(outputStream)
             list_names.append(str(composite_name))
 
-    turn = await agent.enrich("\n".join(list_names))
-    # enrich() rebuilds its own history from scratch (see WikiAgent.enrich),
-    # so turn[0] is the raw internal instruction block sent to the model, not
-    # something a user should see. Drop it and append the rest.
-    if turn and turn[0].get("role") == "user":
-        turn = turn[1:]
-    history = history + turn
-    paused = getattr(agent, "paused", False)
-    return history, gr.update(visible=paused), agent
+    uploading_message = "\n".join(list_names)
+
+    return await send_message(agent, uploading_message, history, "Edit")
+
 
 
 def finish_enrich_ui():
@@ -202,10 +195,9 @@ def watch_todos(agent):
 def free_resources(agent):
     """Best-effort async cleanup when the State is dropped (new conversation / tab close).
 
-    Known limitation, not something fixable from here: Gradio's delete_callback for
-    gr.State is documented but has open reports of not firing reliably on tab close
-    or reload (gradio-app/gradio#8241). Treat this as opportunistic cleanup, not a
-    guarantee every session gets its sqlite connection closed.
+    Known limitation: Gradio's delete_callback for gr.State has open reports
+    of not firing reliably on tab close or reload (gradio-app/gradio#8241).
+    Treat this as opportunistic cleanup, not a guarantee.
     """
     if not agent:
         return
@@ -219,45 +211,124 @@ def free_resources(agent):
         pass
 
 
+def toggle_mode(mode):
+    """Ask <-> Edit switch. Restyles the whole shell via a single CSS class
+    (see styles.py: .mode-edit overrides the --blue/--gold custom properties
+    to red tones, which cascades to everything already built on var(--blue)
+    etc., rather than duplicating every color rule for a second mode), shows
+    the "AI can make mistakes" banner, and only exposes the PDF uploader in
+    Edit mode since enrich() is a file-driven edit operation, out of place
+    in a mode framed as read-only.
+    """
+    is_edit = mode == "Edit"
+    return (
+        gr.update(elem_classes=["mode-edit"] if is_edit else []),  # app_shell
+        gr.update(visible=is_edit),                                 # edit_banner
+        gr.update(visible=is_edit),                                 # pdf_upload
+    )
+
+
+def open_delete_modal(thread_id):
+    if not thread_id:
+        gr.Warning("Pick a session in the list first.")
+        return gr.update(visible=False), None
+    return gr.update(visible=True), thread_id
+
+
+def cancel_delete():
+    return gr.update(visible=False), None
+
+
+async def confirm_delete(thread_id, agent):
+    """Deletes the picked thread. If it was the currently active session, this
+    falls back to starting a fresh conversation rather than leaving the chat
+    pointed at a thread_id whose checkpoints no longer exist.
+
+    delete_thread() is the placeholder import flagged at the top of this
+    file; wire it to your db module once you share its real path.
+    """
+    if not thread_id:
+        return (
+            None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(visible=False), None, gr.update(),
+        )
+
+    await delete_thread(thread_id)
+    sessions_update = await refresh_sessions()
+
+    if agent is not None and getattr(agent, "thread_id", None) == thread_id:
+        agent, chat, approve_upd, ask_upd, pdf_upd, tag = await new_conversation()
+    else:
+        agent, chat, approve_upd, ask_upd, pdf_upd, tag = (
+            agent, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+        )
+
+    return (
+        agent, chat, approve_upd, ask_upd, pdf_upd, tag,
+        gr.update(visible=False), None, sessions_update,
+    )
+
+
 with gr.Blocks(title="Wiki Agent") as ui:
     gr.HTML(HEADER)
     session_tag = gr.HTML(render_session_tag("pending" + "-" * 8))
     agent_state = gr.State(delete_callback=free_resources)
+    delete_target = gr.State(None)
+
+    with gr.Group(visible=False, elem_id="delete-modal") as delete_modal:
+        with gr.Column(elem_id="delete-modal-card"):
+            gr.Markdown("### Delete this conversation?\nThis can't be undone.")
+            with gr.Row():
+                cancel_delete_btn = gr.Button("Cancel")
+                confirm_delete_btn = gr.Button("Delete", variant="stop")
+
+    edit_banner = gr.HTML(EDIT_BANNER, visible=False, elem_id="edit-banner")
 
     with gr.Row():
+
         with gr.Column(scale=1, min_width=220, elem_id="sessions-sidebar"):
             new_conv_button = gr.Button(
                 "New conversation", elem_id="new-conv-button", variant="primary"
+            )
+            mode_switch = gr.Radio(
+                ["Ask", "Edit"], value="Ask", label="Mode", elem_id="mode-switch",
             )
             session_list = gr.Radio(
                 choices=[], label="Recent sessions", elem_id="session-list",
                 interactive=True,
             )
+            delete_session_button = gr.Button(
+                "🗑 Delete selected session", elem_id="delete-session-button",
+                variant="secondary",
+            )
 
-        with gr.Column(scale=4):
+        with gr.Column(scale=4, elem_id="app-shell") as app_shell:
+
             with gr.Row():
-                chatbot = gr.Chatbot(
-                    label="Wiki Agent", height=420, scale=3, elem_id="chat",
-                    show_label=False,
-                )
+                with gr.Column(scale=3):
+                    gr.HTML('<div class="panel-tab">Consultation</div>')
+                    chatbot = gr.Chatbot(
+                        label="Wiki Agent", height=420, elem_id="chat",
+                        show_label=False,
+                    )
+
+                    with gr.Group(elem_id="ask-panel"):
+                        with gr.Row():
+                            pdf_upload = gr.UploadButton(
+                                label="Drop a project PDF document here to enrich the wiki",
+                                file_types=[".pdf"],
+                                # elem_id="pdf-upload",
+                                visible=False,  # Ask is the default mode; enrich is Edit-only
+                            )
+                            message = gr.Textbox(
+                                show_label=False, placeholder="Ask about the wiki...", scale=4
+                            )
+                            ask_button = gr.Button(
+                                "Ask", scale=1, interactive=False, elem_id="ask-button"
+                            )
                 with gr.Column(scale=1):
+                    gr.HTML('<div class="panel-tab">Case file — plan</div>')
                     todos_panel = gr.HTML(render_todos([]), elem_id="plan-panel")
-
-            with gr.Group(elem_id="ask-panel"):
-                with gr.Row():
-                    message = gr.Textbox(
-                        show_label=False, placeholder="Ask about the wiki...", scale=4
-                    )
-                    ask_button = gr.Button(
-                        "Ask", scale=1, interactive=False, elem_id="ask-button"
-                    )
-
-            with gr.Row():
-                pdf_upload = gr.File(
-                    label="Drop a project document here to enrich the wiki",
-                    file_types=[".pdf"],
-                    elem_id="pdf-upload"
-                )
 
             approve_button = gr.Button(
                 "Approve and continue", visible=False, elem_id="approve-button"
@@ -274,30 +345,47 @@ with gr.Blocks(title="Wiki Agent") as ui:
         new_conversation, [], outputs
     ).then(refresh_sessions, None, [session_list])
 
+    # Ask <-> Edit: restyle the shell, show/hide the warning banner, gate the
+    # PDF uploader to Edit mode.
+    mode_switch.change(toggle_mode, [mode_switch], [app_shell, edit_banner, pdf_upload])
+
     # Picking a sidebar entry reattaches a WikiAgent to that thread_id and
     # rebuilds the chat log from its last checkpoint.
     session_list.change(resume_conversation, [session_list], outputs)
 
+    # Delete: pick a session, confirm in the modal, delete + refresh the list.
+    # Falls back to a fresh conversation if the deleted thread was the active one.
+    delete_session_button.click(
+        open_delete_modal, [session_list], [delete_modal, delete_target]
+    )
+    cancel_delete_btn.click(cancel_delete, None, [delete_modal, delete_target])
+    confirm_delete_btn.click(
+        confirm_delete, [delete_target, agent_state],
+        outputs + [delete_modal, delete_target, session_list],
+    )
+
     # Live plan panel, independent of the long-running ask/enrich calls.
     # Each event listener queues on its own by default in Gradio (concurrency_limit=1
     # PER LISTENER, not shared app-wide), so this tick is not blocked by ask/enrich
-    # running. If it still doesn't update live, the cause is elsewhere: see the
-    # note above render_todos about confirming the "todos" state key.
+    # running.
     timer.tick(watch_todos, [agent_state], [todos_panel], show_progress="hidden")
 
-    # 2) Chat-style interface calling "ask". Refreshed after: a new thread's
-    # first turn is what actually creates its first checkpoint row, so this
-    # is the first point the thread can show up in the sidebar at all.
+    # 2) Chat-style interface calling ask() or enrich() depending on mode.
+    # Refreshed after: a new thread's first turn is what actually creates its
+    # first checkpoint row, so this is the first point the thread can show up
+    # in the sidebar at all.
     message.submit(
-        ask, [agent_state, message, chatbot], [chatbot, approve_button, agent_state, message]
+        send_message, [agent_state, message, chatbot, mode_switch],
+        [chatbot, approve_button, agent_state, message],
     ).then(refresh_sessions, None, [session_list])
     ask_button.click(
-        ask, [agent_state, message, chatbot], [chatbot, approve_button, agent_state, message]
+        send_message, [agent_state, message, chatbot, mode_switch],
+        [chatbot, approve_button, agent_state, message],
     ).then(refresh_sessions, None, [session_list])
     approve_button.click(approve, [agent_state, chatbot], [chatbot, approve_button, agent_state])
 
-    # 3) PDF uploader calling "enrich" as soon as a file is submitted.
-    # Three stages: announce + lock, do the work, unlock + clear + refresh sidebar.
+    # 3) PDF uploader (Edit mode only) calling "enrich" as soon as a file is
+    # submitted. Three stages: announce + lock, do the work, unlock + clear + refresh.
     pdf_upload.upload(
         start_enrich_ui, [pdf_upload, chatbot], [chatbot, pdf_upload, ask_button]
     ).then(

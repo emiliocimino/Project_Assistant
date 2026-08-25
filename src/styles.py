@@ -96,6 +96,32 @@ CSS = """
     color: var(--blue);
 }
 
+/* ---------- Delete confirmation (Group + CSS overlay, not gr.Modal) ----------
+gr.Modal isn't available in every Gradio install; verify before depending on
+a component like that again rather than trusting docs-nav wording. This is
+the version-independent fallback: a normal Group, shown/hidden via
+visible=, positioned fixed with a backdrop so it reads as a modal. */
+#delete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(28, 43, 57, 0.45);
+    z-index: 1000;
+}
+#delete-modal-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 1.25rem 1.5rem;
+    max-width: 380px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
 /* ---------- Sessions sidebar ---------- */
 #sessions-sidebar {
     border-right: 1px solid var(--line);
@@ -110,6 +136,76 @@ CSS = """
 }
 #session-list .wrap {
     gap: 0.3rem;
+    max-height: 320px;
+    overflow-y: auto !important;
+}
+#delete-session-button {
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+}
+
+/* ---------- Mode switch ---------- */
+#mode-switch {
+    margin: 0.6rem 0 1rem 0;
+}
+#mode-switch label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* ---------- Edit mode reskin ----------
+Re-declares the same custom properties every other rule in this file already
+reads via var(--blue), var(--gold), etc. Scoping the redeclaration under
+#app-shell.mode-edit means the override cascades to every descendant that
+already uses those variables, no need to duplicate each color rule for a
+second mode. */
+#app-shell.mode-edit {
+    --blue: #8C2A2A;
+    --blue-deep: #6E1F1F;
+    --gold: #B85C2B;
+    --amber: #B85C2B;
+}
+#app-shell.mode-edit #chat,
+#app-shell.mode-edit #plan-panel,
+#app-shell.mode-edit #pdf-upload,
+#app-shell.mode-edit #ask-panel textarea,
+#app-shell.mode-edit #ask-panel input {
+    border-color: #D9B3A8 !important;
+}
+
+.edit-banner {
+    background: #FBEAE6;
+    border: 1px solid #D9A08F;
+    border-left: 4px solid var(--blue, #8C2A2A);
+    color: #5C2A1E;
+    font-size: 0.85rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+}
+.edit-banner strong {
+    display: block;
+    margin-bottom: 0.15rem;
+    font-family: "IBM Plex Sans", sans-serif;
+}
+
+/* ---------- Panel labels ----------
+Plain sibling elements in normal document flow, not an absolutely-positioned
+::before sitting on a component's border. The previous approach fought
+Gradio's own internal wrapper divs (background/overflow/stacking are not a
+stable public contract), which is exactly why the label ended up rendered
+behind the chatbot and unreadable. This can't have that problem: it isn't
+layered on top of anything. */
+.panel-tab {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0.4rem 0 0.35rem 0.1rem;
 }
 
 /* ---------- Folder-tab panels ---------- */
@@ -119,29 +215,15 @@ CSS = """
     border-radius: 2px !important;
     background: var(--card) !important;
 }
-#chat::before, #plan-panel::before {
-    content: attr(data-tab);
-    position: absolute;
-    top: -0.62rem;
-    left: 0.85rem;
-    background: var(--paper);
-    padding: 0 0.4rem;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    color: var(--ink-soft);
-    text-transform: uppercase;
-}
-#chat { margin-top: 0.6rem; }
-#chat::before { content: "Consultation"; }
+#chat { margin-top: 0.1rem; }
 
 /* ---------- Plan / ledger panel ---------- */
 #plan-panel {
-    margin-top: 0.6rem;
+    margin-top: 0.1rem;
     padding: 1.1rem 1.1rem 1rem 1.1rem;
-    min-height: 380px;
+    max-height: 420px;
+    overflow-y: auto !important;
 }
-#plan-panel::before { content: "Case file — plan"; left: 1.1rem; }
 #plan-panel h3 {
     font-family: "Source Serif 4", serif;
     font-size: 1rem;
@@ -222,11 +304,10 @@ CSS = """
 
 /* ---------- Upload tray ---------- */
 #pdf-upload {
-    margin-top: 0.75rem;
+    margin-top: 0.1rem;
     border: 1.5px dashed var(--gold) !important;
     background: #FDFAF3 !important;
 }
-#pdf-upload::before { content: "Intake"; }
 
 /* ---------- Buttons ---------- */
 #new-conv-button, #approve-button, #ask-button {

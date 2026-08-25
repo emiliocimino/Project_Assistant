@@ -12,6 +12,7 @@ from langgraph.types import Command
 import aiosqlite
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 from memory.manager import get_sqlite_connection
 from src.wiki_agent_tools import get_tools, McpSessions, EvaluatorOutput
@@ -48,18 +49,19 @@ class ImageToolGuardrail(AgentMiddleware):
 
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
-        if tool_call["name"] and tool_call["args"]["operation"] == "render_page":
-            print("[Middleware Guardrail]: Skipping Image tool")
-            return ToolMessage(
-                content=f"Rendering Tool is forbidden. Please use other tools that does not involve images",
-                tool_call_id=request.tool_call["id"],
-            )
+        if tool_call["name"] == "pdf_evidence":
+            if tool_call["args"]["operation"] == "render_page":
+                print("[Middleware Guardrail]: Skipping Image tool")
+                return ToolMessage(
+                    content=f"Rendering Tool is forbidden. Please use other tools that does not involve images",
+                    tool_call_id=request.tool_call["id"],
+                )
         return await handler(request)
 
 
 MAX_ATTEMPTS = 3
 BASE_SYSTEM_PROMPT = SystemMessage(
-    """
+    f"""
     You are an experienced project manager. Your role is to assist a team in managing information about European Projects.
     You are a direct, precise manager who organizes information and create links into an organized structures.
 
@@ -101,7 +103,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     > Folder containing all information related to a specific Work Package.
 
     ### Summary.md
-    > Summary of the WP, including its role in the project and an overview of its Tasks.
+    > Summary of the WP, including its role in the project and an overview of its Tasks and Deliverables
 
     ### Task_X
     > Folder containing all information related to a specific Task.
@@ -109,6 +111,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     #### Summary.md
     > Description of the Task, its Task Leader, and the Partners involved.
     > Also records progress and relevant updates concerning the Task.
+    
 
     #### Assets.md
     > Documentation and references for assets developed within the Task for the Partners.
@@ -134,6 +137,10 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     > A completed TODO moved from the TODOs folder after completion.
 
     IMPORTANT: Do not use the tool pdf_evidence with operation "render_page"
+    IMPORTANT: Before editing any file or creating new folders, make sure it exists. If the file already exist, avoid
+    deleting content inside, rather update it by adding a [DATETIME] - EDIT: tag.
+    
+    Today is: {datetime.today().strftime('%Y-%m-%d')}
     """
 
 )
@@ -181,7 +188,7 @@ class WikiAgent:
                     interrupt_on={"edit_file": True, "move_file": True}
                 ),
                 TodoListMiddleware(),
-                ModelCallLimitMiddleware(run_limit=30),
+                ModelCallLimitMiddleware(run_limit=100),
                 TolerateToolErrors(),
                 LogToolUsage(),
                 ImageToolGuardrail()
@@ -201,7 +208,7 @@ class WikiAgent:
         success_criteria = "You successfully read the Wiki and answer the user question without leaving doubts"
         return await self._run_turn(message, success_criteria, history)
 
-    async def enrich(self, filepaths: str):
+    async def enrich(self, user_request: str, history: list):
         """
         A flow to enrich the current wiki
         :return:
@@ -212,11 +219,10 @@ class WikiAgent:
         Read the file some pages per time, if too large, remembering the last page you have read. 
 
         Answer with the list of modified files and a summary of what you changed.
-        Here's the list of file(s): {filepaths}
-        """
+        """ + user_request
 
         success_criteria = "Read the file and create / update the wiki accordingly. Success if all information are put in wiki"
-        return await self._run_turn(message, success_criteria, [])
+        return await self._run_turn(message, success_criteria, history)
 
     async def _run_turn(self, message: str, success_criteria: str, history: list) -> list:
         """One turn of conversation: the worker attempts the task and the evaluator checks it,

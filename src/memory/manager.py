@@ -98,3 +98,15 @@ async def load_history(thread_id: str) -> list[dict]:
         return history
     finally:
         await conn.close()
+
+
+async def delete_thread(thread_id: str) -> None:
+    """Removes a thread's checkpoints entirely. Deletes from both checkpoints
+    and writes, both keyed by thread_id in langgraph-checkpoint-sqlite."""
+    conn, _ = await get_sqlite_connection()
+    try:
+        await conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+        await conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+        await conn.commit()
+    finally:
+        await conn.close()
