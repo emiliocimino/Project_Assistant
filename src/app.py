@@ -393,6 +393,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
 
 if __name__ == "__main__":
     from loguru import logger
+    logger.info(os.getenv("API_KEY"))
 
     if not os.path.isdir(DATA_DIR):
         os.mkdir(DATA_DIR)
