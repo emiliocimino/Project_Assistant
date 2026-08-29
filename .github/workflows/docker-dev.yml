@@ -25,10 +25,10 @@ jobs:
           activate-environment: "true"
 
       - name: Install the project
-        run: uv sync --all-extras --dev --project src/pyproject.toml
+        run: uv sync --all-extras --dev --project pyproject.toml
 
       - name: Run tests via uv
-        run: uv run pytest -c src/pyproject.toml
+        run: uv run pytest -c pyproject.toml
 
 
   push-dev:
@@ -50,7 +50,7 @@ jobs:
       - name: Read version from pyproject.toml
         id: version
         run: |
-          VERSION=$(uv version --short --project src/pyproject.toml)
+          VERSION=$(uv version --short --project pyproject.toml)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Compute dev tag from short SHA

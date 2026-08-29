@@ -392,5 +392,8 @@ with gr.Blocks(title="Wiki Agent") as ui:
 
 
 if __name__ == "__main__":
-    # Gradio 6: theme/css/head are launch() arguments, not Blocks() arguments.
+    if not os.path.isdir(DATA_DIR):
+        os.mkdir(DATA_DIR)
+        os.mkdir(DATA_DIR / "wiki")
+        os.mkdir(DATA_DIR / "sources")
     ui.launch(inbrowser=True, **LAUNCH_STYLE, server_port=7860)
