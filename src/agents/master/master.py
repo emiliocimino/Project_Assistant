@@ -83,27 +83,8 @@ class WikiAgent:
         )
         return cls(conn, checkpointer, graph, thread_id, tools, sessions)
 
-    async def ask(self, message: str, history: list) -> list:
-        """
-        Sets up the Agent in "Read" mode.
-        Then starts a flow to ask questions about the current wiki
-        :param message: The user question
-        :param history: The past history
-        :return:
-        """
-        success_criteria = "You successfully read the Wiki and answer the user question without leaving doubts"
-        return await self._run_turn(message, success_criteria, history)
 
-    async def enrich(self, user_request: str, history: list):
-        """
-        A flow to enrich the current wiki
-        :return:
-        """
-
-        success_criteria = "Read the file and update the wiki accordingly. Success if all information are put in wiki"
-        return await self._run_turn(user_request, success_criteria, history)
-
-    async def _run_turn(self, message: str, success_criteria: str, history: list) -> list:
+    async def run_turn(self, message: str, success_criteria: str, history: list) -> list:
         """One turn of conversation: the worker attempts the task and the evaluator checks it,
         retrying with feedback up to MAX_ATTEMPTS. If the worker pauses for approval, this
         returns straight away with paused set, and resume() continues the same turn."""
@@ -115,7 +96,7 @@ class WikiAgent:
             "messages": [
                 {
                     "role": "user",
-                    "content": f"{message}\n\nThe success criteria for this task are: {self.success_criteria}",
+                    "content": f"{message}\n\n",
                 }
             ]
         }

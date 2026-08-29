@@ -119,20 +119,14 @@ async def send_message(agent, message, history, mode):
     if agent is None or not message:
         return history, gr.update(visible=False), agent, message
     if mode == "Edit":
-        history = await agent.enrich(message, history)
+        success_criteria = "The file is entirely read and the wiki entirely updated"
+        history = await agent.run_turn(message, success_criteria, history)
     else:
-        history = await agent.ask(message, history)
+        success_criteria = "The question is answered correctly and completely with information from the wiki"
+        history = await agent.run_turn(message, success_criteria, history)
     paused = getattr(agent, "paused", False)
+
     return history, gr.update(visible=paused), agent, ""
-
-
-async def approve(agent, history):
-    """Continues a turn that paused for human-in-the-loop approval."""
-    if agent is None:
-        return history, gr.update(visible=False), agent
-    history = await agent.resume(history)
-    paused = getattr(agent, "paused", False)
-    return history, gr.update(visible=paused), agent
 
 
 def start_enrich_ui(pdf_file, history):
@@ -185,11 +179,19 @@ async def enrich_file(agent, pdf_file, history):
     return await send_message(agent, uploading_message, history, "Edit")
 
 
-
 def finish_enrich_ui():
     """Unlocks the controls once enrich_file has returned, and clears the upload
     slot so a repeat drop of the same file re-triggers the .upload() event."""
     return gr.update(value=None, interactive=True), gr.update(interactive=True)
+
+
+async def approve(agent, history):
+    """Continues a turn that paused for human-in-the-loop approval."""
+    if agent is None:
+        return history, gr.update(visible=False), agent
+    history = await agent.resume(history)
+    paused = getattr(agent, "paused", False)
+    return history, gr.update(visible=paused), agent
 
 
 def watch_todos(agent):
