@@ -2,7 +2,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
 from contextlib import AsyncExitStack
 from pydantic import BaseModel, Field
-import asyncio
+from loguru import logger
 
 class EvaluatorOutput(BaseModel):
     feedback: str = Field(description="Feedback on the assistant's response")
@@ -76,6 +76,6 @@ if __name__ == "__main__":
 
     client = MultiServerMCPClient(mcp_connections("test"))
     browser_tools = asyncio.run(client.get_tools())
-    print(f"Loaded {len(browser_tools)} browser tools:")
+    logger.info(f"Loaded {len(browser_tools)} browser tools:")
     for t in browser_tools:
-        print(" -", t.name)
+        logger.info(" -", t.name)

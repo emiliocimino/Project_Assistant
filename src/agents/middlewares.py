@@ -1,5 +1,6 @@
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import ToolMessage
+from loguru import logger
 
 
 class TolerateToolErrors(AgentMiddleware):
@@ -21,7 +22,7 @@ class LogToolUsage(AgentMiddleware):
 
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
-        print(f"Used tool: {tool_call["name"]} with args: {tool_call["args"]}")
+        logger.info(f"Used tool: {tool_call["name"]} with args: {tool_call["args"]}")
         return await handler(request)
 
 
@@ -32,7 +33,7 @@ class ImageToolGuardrail(AgentMiddleware):
         tool_call = request.tool_call
         if tool_call["name"] == "pdf_evidence":
             if tool_call["args"]["operation"] == "render_page":
-                print("[Middleware Guardrail]: Skipping Image tool")
+                logger.info("[Middleware Guardrail]: Skipping Image tool")
                 return ToolMessage(
                     content=f"Rendering Tool is forbidden. Please use other tools that does not involve images",
                     tool_call_id=request.tool_call["id"],

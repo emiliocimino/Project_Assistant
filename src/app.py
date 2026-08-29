@@ -1,10 +1,4 @@
 """Gradio app for the Wiki Agent. Run with: uv run app.py
-
-Delete confirmation uses a plain gr.Group toggled by visible=, styled as a
-fixed-position overlay in styles.py. Not gr.Modal: that turned out not to
-exist in this Gradio install (AttributeError), so don't reintroduce it
-without checking `python -c "import gradio; print(gradio.__version__)"`
-against what actually ships a Modal component first.
 """
 
 import asyncio
