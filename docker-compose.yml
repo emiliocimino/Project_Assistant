@@ -1,6 +1,6 @@
 services:
   eurofmx_manager:
-    image: ghcr.io/emiliocimino/aas_chatbot-project_assistant:latest
+    image: ghcr.io/emiliocimino/project_assistant:0.1.0-dev-9c1fb20
     container_name: project_assistant
     environment:
       - API_KEY=${API_KEY}
@@ -13,4 +13,4 @@ services:
     ports:
       - "7860:7860"
     volumes:
-      - /home/developer/eurofmx/data:/home/src/data
+      - ./data:/home/src/data
