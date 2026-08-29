@@ -21,7 +21,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          working-directory: '${{ github.workspace }}/src'
+          working-directory: '${{ github.workspace }}'
           activate-environment: "true"
 
       - name: Install the project
