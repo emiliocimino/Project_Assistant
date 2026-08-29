@@ -1,6 +1,10 @@
 """Gradio app for the Wiki Agent. Run with: uv run app.py
 
-Written against Gradio 6.
+Delete confirmation uses a plain gr.Group toggled by visible=, styled as a
+fixed-position overlay in styles.py. Not gr.Modal: that turned out not to
+exist in this Gradio install (AttributeError), so don't reintroduce it
+without checking `python -c "import gradio; print(gradio.__version__)"`
+against what actually ships a Modal component first.
 """
 
 import asyncio
@@ -15,8 +19,7 @@ import gradio as gr
 
 import styles
 
-# Adjust this import to match where WikiAgent actually lives in your project
-from src.wiki_agent import WikiAgent
+from agents.master.master import WikiAgent
 from memory.manager import list_threads, load_history, delete_thread
 
 LAUNCH_STYLE = {"theme": styles.THEME, "css": styles.CSS, "head": styles.HEAD}
@@ -115,7 +118,7 @@ async def send_message(agent, message, history, mode):
     """Wired to the chat textbox/button. Which agent method gets called
     depends on the mode switch: Ask mode is framed as read-only (agent.ask),
     Edit mode allows the same box to create or update wiki files directly,
-    e.g. quick notes (agent.edit). Both still go through the same
+    e.g. quick notes (agent.enrich). Both still go through the same
     HumanInTheLoopMiddleware for actual file edits/moves either way; the
     difference is the success-criteria framing given to the model, not a
     hard permission wall.
@@ -142,11 +145,10 @@ async def approve(agent, history):
 def start_enrich_ui(pdf_file, history):
     """Runs the instant the file lands, before any PDF processing starts.
 
-    Writes a visible "working on it" turn immediately and locks the ask box
-    and upload control. Locking matters, not just cosmetics: ask() and
-    enrich() drive the same LangGraph thread_id, and letting a message fire
-    into the graph while an enrich() run is mid-flight on the same thread is
-    a race, not a supported concurrent use of the checkpointer.
+    Locks the ask box and upload control. Locking matters, not just
+    cosmetics: ask()/enrich() drive the same LangGraph thread_id, and letting
+    a message fire into the graph while an enrich() run is mid-flight on the
+    same thread is a race, not a supported concurrent use of the checkpointer.
     """
     if pdf_file is None:
         return history, gr.update(interactive=True), gr.update(interactive=True)
@@ -216,7 +218,7 @@ def toggle_mode(mode):
     (see styles.py: .mode-edit overrides the --blue/--gold custom properties
     to red tones, which cascades to everything already built on var(--blue)
     etc., rather than duplicating every color rule for a second mode), shows
-    the "AI can make mistakes" banner, and only exposes the PDF uploader in
+    the "AI can make mistakes" badge, and only exposes the upload button in
     Edit mode since enrich() is a file-driven edit operation, out of place
     in a mode framed as read-only.
     """
@@ -224,7 +226,7 @@ def toggle_mode(mode):
     return (
         gr.update(elem_classes=["mode-edit"] if is_edit else []),  # app_shell
         gr.update(visible=is_edit),                                 # edit_banner
-        gr.update(visible=is_edit),                                 # pdf_upload
+        gr.update(interactive=is_edit),                                 # pdf_upload
     )
 
 
@@ -243,9 +245,6 @@ async def confirm_delete(thread_id, agent):
     """Deletes the picked thread. If it was the currently active session, this
     falls back to starting a fresh conversation rather than leaving the chat
     pointed at a thread_id whose checkpoints no longer exist.
-
-    delete_thread() is the placeholder import flagged at the top of this
-    file; wire it to your db module once you share its real path.
     """
     if not thread_id:
         return (
@@ -281,9 +280,6 @@ with gr.Blocks(title="Wiki Agent") as ui:
             with gr.Row():
                 cancel_delete_btn = gr.Button("Cancel")
                 confirm_delete_btn = gr.Button("Delete", variant="stop")
-
-    edit_banner = gr.HTML(EDIT_BANNER, visible=False, elem_id="edit-banner")
-
     with gr.Row():
 
         with gr.Column(scale=1, min_width=220, elem_id="sessions-sidebar"):
@@ -303,6 +299,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
             )
 
         with gr.Column(scale=4, elem_id="app-shell") as app_shell:
+            edit_banner = gr.HTML(EDIT_BANNER, visible=False, elem_id="edit-banner")
 
             with gr.Row():
                 with gr.Column(scale=3):
@@ -315,16 +312,16 @@ with gr.Blocks(title="Wiki Agent") as ui:
                     with gr.Group(elem_id="ask-panel"):
                         with gr.Row():
                             pdf_upload = gr.UploadButton(
-                                label="Drop a project PDF document here to enrich the wiki",
+                                label="🔗",
                                 file_types=[".pdf"],
-                                # elem_id="pdf-upload",
-                                visible=False,  # Ask is the default mode; enrich is Edit-only
+                                elem_id="upload-button",
+                                interactive=False,
                             )
                             message = gr.Textbox(
                                 show_label=False, placeholder="Ask about the wiki...", scale=4
                             )
                             ask_button = gr.Button(
-                                "Ask", scale=1, interactive=False, elem_id="ask-button"
+                                "💬", scale=1, interactive=False, elem_id="ask-button"
                             )
                 with gr.Column(scale=1):
                     gr.HTML('<div class="panel-tab">Case file — plan</div>')
@@ -346,7 +343,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
     ).then(refresh_sessions, None, [session_list])
 
     # Ask <-> Edit: restyle the shell, show/hide the warning banner, gate the
-    # PDF uploader to Edit mode.
+    # upload button to Edit mode.
     mode_switch.change(toggle_mode, [mode_switch], [app_shell, edit_banner, pdf_upload])
 
     # Picking a sidebar entry reattaches a WikiAgent to that thread_id and
@@ -384,7 +381,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
     ).then(refresh_sessions, None, [session_list])
     approve_button.click(approve, [agent_state, chatbot], [chatbot, approve_button, agent_state])
 
-    # 3) PDF uploader (Edit mode only) calling "enrich" as soon as a file is
+    # 3) Upload button (Edit mode only) calling "enrich" as soon as a file is
     # submitted. Three stages: announce + lock, do the work, unlock + clear + refresh.
     pdf_upload.upload(
         start_enrich_ui, [pdf_upload, chatbot], [chatbot, pdf_upload, ask_button]

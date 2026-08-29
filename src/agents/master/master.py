@@ -1,149 +1,28 @@
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
-    AgentMiddleware,
     HumanInTheLoopMiddleware,
     ModelCallLimitMiddleware,
     TodoListMiddleware)
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 import aiosqlite
 import os
 from dotenv import load_dotenv
-from datetime import datetime
 
+from agents.master.system_prompt import BASE_SYSTEM_PROMPT
+from agents.middlewares import TolerateToolErrors, LogToolUsage, ImageToolGuardrail
 from memory.manager import get_sqlite_connection
-from src.wiki_agent_tools import get_tools, McpSessions, EvaluatorOutput
+from agents.tools import get_tools, McpSessions, EvaluatorOutput
 from src import DATA_DIR
 
 load_dotenv(override=True)
 MODEL_NAME = os.getenv("MODEL_NAME")
-
-class TolerateToolErrors(AgentMiddleware):
-    """Hand tool failures back to the model as a message so it can recover, rather than
-    crashing the run. Tools that touch the outside world, like a browser, fail now and then."""
-
-    async def awrap_tool_call(self, request, handler):
-        try:
-            return await handler(request)
-        except Exception as error:
-            return ToolMessage(
-                content=f"That tool call failed: {error}. Try another approach.",
-                tool_call_id=request.tool_call["id"],
-            )
-
-
-class LogToolUsage(AgentMiddleware):
-    """Log tool usage"""
-
-    async def awrap_tool_call(self, request, handler):
-        tool_call = request.tool_call
-        print(f"Used tool: {tool_call["name"]} with args: {tool_call["args"]}")
-        return await handler(request)
-
-
-class ImageToolGuardrail(AgentMiddleware):
-    """Avoids use of images for OCR"""
-
-    async def awrap_tool_call(self, request, handler):
-        tool_call = request.tool_call
-        if tool_call["name"] == "pdf_evidence":
-            if tool_call["args"]["operation"] == "render_page":
-                print("[Middleware Guardrail]: Skipping Image tool")
-                return ToolMessage(
-                    content=f"Rendering Tool is forbidden. Please use other tools that does not involve images",
-                    tool_call_id=request.tool_call["id"],
-                )
-        return await handler(request)
-
+URL = os.getenv("API_URL")
+API_KEY = os.getenv("API_KEY")
 
 MAX_ATTEMPTS = 3
-BASE_SYSTEM_PROMPT = SystemMessage(
-    f"""
-    You are an experienced project manager. Your role is to assist a team in managing information about European Projects.
-    You are a direct, precise manager who organizes information and create links into an organized structures.
-
-    Your working method is precise. You organize project information into a wikipedia-like structure.
-    You have also access to important project documentation. Documentation is quite heavyweight, so you read them once and create
-    your wiki.
-
-    Here's how your data is organized:
-    - Sources -> Folder that contain several files (documentation, PDF files). You cannot modify any file in this folder, only read files inside
-        Use your PDF reading tools here to read information
-
-    - wiki -> Here it is your playground. You can create folders and files, edit files with new information. 
-        In your wiki it is really important to create links between files, so that it is easy to browse information and create links
-
-
-    To better organize the wiki folder, you should follow this structure, where markdown describes how to nest and what should contain:
-
-    # Partners
-    > Folder containing all project partners.
-
-    ## PartnerX
-    > Folder containing all information related to a specific partner.
-
-    ### Role.md
-    > Summary of the partner's role in the project.
-    > Contains links to the relevant Work Packages (WPs), Tasks, and assigned Project Managers (PMs).
-
-    ### People
-    > Folder containing profiles of people belonging to the partner.
-
-    #### PersonX.md
-    > Personal profile of a person, including a brief psychological/personality profile and relevant skills or competencies, if available.
-
-
-    # WPs
-    > Folder containing all Work Packages (WPs) in the project.
-
-    ## WP
-    > Folder containing all information related to a specific Work Package.
-
-    ### Summary.md
-    > Summary of the WP, including its role in the project and an overview of its Tasks and Deliverables
-
-    ### Task_X
-    > Folder containing all information related to a specific Task.
-
-    #### Summary.md
-    > Description of the Task, its Task Leader, and the Partners involved.
-    > Also records progress and relevant updates concerning the Task.
-    
-
-    #### Assets.md
-    > Documentation and references for assets developed within the Task for the Partners.
-
-    #### Studies.md
-    > References to relevant studies, research papers, articles, and other scientific or technical material related to the Task.
-
-    #### Synergies.md
-    > Documents connections and synergies between this Task and other Tasks.
-    > Contains links and a description of how the Tasks are related.
-
-    #### TODOs
-    > Folder containing ongoing TODO items related to the Task.
-
-    ##### [date_start - date_end] TodoX.md
-    > File describing an ongoing TODO.
-    > The filename specifies the expected start and end dates.
-
-    #### Completed
-    > Folder containing TODOs that have been completed.
-
-    ##### TodoX.md
-    > A completed TODO moved from the TODOs folder after completion.
-
-    IMPORTANT: Do not use the tool pdf_evidence with operation "render_page"
-    IMPORTANT: Before editing any file or creating new folders, make sure it exists. If the file already exist, avoid
-    deleting content inside, rather update it by adding a [DATETIME] - EDIT: tag.
-    
-    Today is: {datetime.today().strftime('%Y-%m-%d')}
-    """
-
-)
 
 
 class WikiAgent:
@@ -165,8 +44,10 @@ class WikiAgent:
         self.task = None
         self.success_criteria = None
         self.todos = []
-        self.evaluator = ChatOllama(
-            model=MODEL_NAME
+        self.evaluator = ChatOpenAI(
+            model=MODEL_NAME,
+            base_url=URL,
+            api_key=API_KEY
         ).with_structured_output(EvaluatorOutput)
 
     @classmethod
@@ -178,9 +59,14 @@ class WikiAgent:
 
         tools, sessions = await get_tools(sandbox=str(DATA_DIR))
         conn, checkpointer = await get_sqlite_connection()
+        model = ChatOpenAI(
+            model=MODEL_NAME,
+            base_url=URL,
+            api_key=API_KEY
+        )
 
         graph = create_agent(
-            model=f"ollama:{MODEL_NAME}",
+            model=model,
             tools=tools,
             system_prompt=BASE_SYSTEM_PROMPT,
             middleware=[
@@ -213,16 +99,9 @@ class WikiAgent:
         A flow to enrich the current wiki
         :return:
         """
-        message = f"""Organize your wiki adding the following file to your information. 
-        Use the structure you know to understand where to place new files and update information only if needed.
-        Take particular care at person names and organization to understand where to place information.
-        Read the file some pages per time, if too large, remembering the last page you have read. 
 
-        Answer with the list of modified files and a summary of what you changed.
-        """ + user_request
-
-        success_criteria = "Read the file and create / update the wiki accordingly. Success if all information are put in wiki"
-        return await self._run_turn(message, success_criteria, history)
+        success_criteria = "Read the file and update the wiki accordingly. Success if all information are put in wiki"
+        return await self._run_turn(user_request, success_criteria, history)
 
     async def _run_turn(self, message: str, success_criteria: str, history: list) -> list:
         """One turn of conversation: the worker attempts the task and the evaluator checks it,
@@ -271,9 +150,7 @@ class WikiAgent:
             verdict = await self.evaluate(self.task, self.success_criteria, reply, tools_used)
             if verdict.success_criteria_met or verdict.user_input_needed or self.attempts >= MAX_ATTEMPTS:
                 return history + [
-                    {"role": "assistant", "content": reply},
-                    {"role": "assistant", "content": f"Evaluator: {verdict.feedback}"},
-                ]
+                    {"role": "assistant", "content": reply}]
             payload = {
                 "messages": [
                     {

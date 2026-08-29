@@ -127,21 +127,56 @@ visible=, positioned fixed with a backdrop so it reads as a modal. */
     border-right: 1px solid var(--line);
     padding-right: 0.9rem;
 }
-#session-list label {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-}
-#session-list .wrap {
-    gap: 0.3rem;
-    max-height: 320px;
-    overflow-y: auto !important;
-}
 #delete-session-button {
     margin-top: 0.5rem;
     font-size: 0.82rem;
+}
+
+/* ---------- Session list, reskinned from radio buttons to a chat-style list ----------
+gr.Radio is kept for its actual behavior (exactly one selected, stays
+selected on click, fires .change()), which is what "textboxes with anchor
+that stay selected when clicked" needs functionally. Only the appearance
+changes: the native radio circle is hidden and each option's <label> is
+styled as a full-width clickable row instead.
+
+Scoping note, same caution as the earlier gr.Modal mistake: `label` is a
+real HTML tag, and `input[type="radio"]` is real HTML too, not a guessed
+Gradio-internal class name. `label:has(input[type="radio"])` targets only
+rows that actually wrap a radio input, which per-option rows do and the
+component's own group title (rendered separately) doesn't, so this can't
+accidentally restyle the "Recent sessions" title. `:has()` needs a
+reasonably current browser (Chrome/Firefox/Safari 2023+); if this doesn't
+visually apply, that's the first thing to check, not the class names.
+*/
+#session-list input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+#session-list label:has(input[type="radio"]) {
+    display: block;
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    margin: 0 0 0.25rem 0;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--ink);
+    transition: background 0.12s ease;
+}
+#session-list label:has(input[type="radio"]):hover {
+    background: var(--paper);
+}
+#session-list label:has(input[type="radio"]:checked) {
+    background: #E3E9F5;
+    border-color: var(--blue);
+    font-weight: 600;
 }
 
 /* ---------- Mode switch ---------- */
@@ -170,25 +205,47 @@ second mode. */
 }
 #app-shell.mode-edit #chat,
 #app-shell.mode-edit #plan-panel,
-#app-shell.mode-edit #pdf-upload,
 #app-shell.mode-edit #ask-panel textarea,
 #app-shell.mode-edit #ask-panel input {
     border-color: #D9B3A8 !important;
 }
 
+/* ---------- Edit-mode badge ----------
+Deliberately NOT in normal document flow. It used to be a full-width HTML
+block sitting above the chat, which pushed the chatbot down every time Edit
+mode turned on. position: fixed removes it from layout entirely, so turning
+it on/off can never shift anything else on the page. It floats in the
+top-right corner instead, readable but not disruptive.
+
+Caveat, stated rather than assumed away: position: fixed is relative to the
+viewport UNLESS an ancestor element has a `transform` (or a few other
+properties) set, in which case it becomes relative to that ancestor instead.
+Gradio containers don't set `transform` by default, so this should float
+correctly in the corner; if it instead appears to scroll with the page or
+lands somewhere unexpected, that ancestor-transform case is what's happening,
+and the fix is `position: sticky; top: 0.75rem;` on #edit-banner instead.
+*/
+#edit-banner {
+    position: fixed;
+    top: 0.85rem;
+    right: 1.1rem;
+    z-index: 500;
+    max-width: 320px;
+}
 .edit-banner {
     background: #FBEAE6;
     border: 1px solid #D9A08F;
     border-left: 4px solid var(--blue, #8C2A2A);
     color: #5C2A1E;
-    font-size: 0.85rem;
-    padding: 0.65rem 0.9rem;
-    border-radius: 2px;
-    margin-bottom: 0.75rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    padding: 0.55rem 0.8rem;
+    border-radius: 3px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 .edit-banner strong {
     display: block;
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.1rem;
     font-family: "IBM Plex Sans", sans-serif;
 }
 
@@ -209,7 +266,7 @@ layered on top of anything. */
 }
 
 /* ---------- Folder-tab panels ---------- */
-#chat, #plan-panel, #pdf-upload {
+#chat, #plan-panel {
     position: relative;
     border: 1px solid var(--line) !important;
     border-radius: 2px !important;
@@ -282,35 +339,87 @@ layered on top of anything. */
 .stamp.in_progress { color: var(--amber); }
 .stamp.completed { color: var(--green); }
 
-/* ---------- Ask panel: form-style, not boxy ---------- */
+/* ---------- Ask panel: one flat pill instead of three separate cards ----------
+The previous version resized the buttons themselves but never touched the
+box Gradio wraps around each component (UploadButton/Textbox/Button each get
+their own white block, border, padding by default from the theme). With
+#ask-panel's own background transparent, the page's grey showed through in
+the gaps between those three separate white boxes, that was the "ugly grey
+space", three cards with gaps, not one bar.
+
+Fix: give #ask-panel itself the pill (white background, border, radius), and
+reset every descendant inside it to transparent/borderless so they all read
+as content sitting on that one shared surface instead of separate blocks.
+Using a wildcard here rather than guessing a specific Gradio block class
+name (same reasoning as the label:has() approach above): we want everything
+inside this pill flattened regardless of Gradio's internal wrapper structure. */
 #ask-panel {
+    background: var(--card) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 999px !important;
+    padding: 0.3rem 0.5rem !important;
+    box-shadow: none !important;
+    margin-top: 0 !important;
+}
+#ask-panel > div {
+    display: flex !important;
+    width: 100% !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+/* Belt and suspenders: justify-content: space-between above pushes the two
+   buttons to the edges on its own, regardless of exact nesting. This
+   flex-grow rule is the more precise mechanism, textarea's wrapper
+   consumes all remaining space, buttons stay fixed, but it only works if
+   #ask-panel > div is actually the row's flex container. If it isn't (one
+   more level of Gradio wrapper than expected), space-between still gets you
+   "buttons at the edges" even though this rule does nothing. */
+#ask-panel > div > *:not(#upload-button):not(#ask-button) {
+    flex: 1 1 auto !important;
+}
+#ask-panel > div > #upload-button,
+#ask-panel > div > #ask-button {
+    flex: 0 0 auto !important;
+}
+#ask-panel * {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 0 !important;
-    margin-top: 0.85rem;
 }
-#ask-panel textarea, #ask-panel input {
-    background: var(--card) !important;
-    border: none !important;
+#ask-panel textarea, #ask-panel input[type="text"] {
     border-bottom: 2px solid var(--line) !important;
     border-radius: 0 !important;
     font-size: 0.95rem !important;
+    padding: 0.75rem 0.3rem !important;
+    width: 100% !important;
 }
-#ask-panel textarea:focus, #ask-panel input:focus {
+#ask-panel textarea:focus, #ask-panel input[type="text"]:focus {
     border-bottom-color: var(--blue) !important;
-    box-shadow: none !important;
 }
-
-/* ---------- Upload tray ---------- */
-#pdf-upload {
-    margin-top: 0.1rem;
-    border: 1.5px dashed var(--gold) !important;
-    background: #FDFAF3 !important;
+#ask-button, #ask-button button,
+#upload-button, #upload-button button {
+    min-width: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 50% !important;
+    font-size: 1rem !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-self: center !important;
+    flex-shrink: 0;
+}
+#ask-button:hover, #ask-button button:hover,
+#upload-button:hover, #upload-button button:hover {
+    background: var(--paper) !important;
 }
 
 /* ---------- Buttons ---------- */
-#new-conv-button, #approve-button, #ask-button {
+#new-conv-button, #approve-button {
     font-family: "IBM Plex Sans", sans-serif !important;
     font-weight: 600 !important;
     letter-spacing: 0.01em;
@@ -338,5 +447,6 @@ button:focus-visible, textarea:focus-visible, input:focus-visible {
 @media (max-width: 900px) {
     #header h1 { font-size: 1.6rem; }
     #plan-panel { min-height: 220px; }
+    #edit-banner { max-width: calc(100vw - 2rem); }
 }
 """
