@@ -401,4 +401,4 @@ if __name__ == "__main__":
         os.mkdir(DATA_DIR / "sources")
 
     logger.info("Starting application...")
-    ui.launch(**LAUNCH_STYLE, server_port=7860, server_name="0.0.0.0")
+    ui.launch(**LAUNCH_STYLE)
