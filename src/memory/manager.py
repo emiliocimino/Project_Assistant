@@ -65,6 +65,10 @@ async def list_threads(limit: int = 30) -> list[dict]:
                 "label": _label_from_checkpoint_tuple(tup, thread_id),
             })
         return threads
+    except aiosqlite.OperationalError as e:
+        if "no such table" in str(e):
+            return []
+        raise
     finally:
         await conn.close()
 
@@ -96,10 +100,6 @@ async def load_history(thread_id: str) -> list[dict]:
             if role and content:
                 history.append({"role": role, "content": content})
         return history
-    except aiosqlite.OperationalError as e:
-        if "no such table" in str(e):
-            return []
-        raise
     finally:
         await conn.close()
 
