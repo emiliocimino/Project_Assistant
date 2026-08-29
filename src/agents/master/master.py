@@ -11,10 +11,10 @@ import aiosqlite
 import os
 from dotenv import load_dotenv
 
-from agents.master.system_prompt import BASE_SYSTEM_PROMPT
-from agents.middlewares import TolerateToolErrors, LogToolUsage, ImageToolGuardrail
-from memory.manager import get_sqlite_connection
-from agents.tools import get_tools, McpSessions, EvaluatorOutput
+from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT
+from src.agents.middlewares import TolerateToolErrors, LogToolUsage, ImageToolGuardrail
+from src.memory.manager import get_sqlite_connection
+from src.agents.tools import get_tools, McpSessions, EvaluatorOutput
 from src import DATA_DIR
 
 load_dotenv(override=True)

@@ -17,10 +17,9 @@ from src import DATA_DIR
 
 import gradio as gr
 
-import styles
-
-from agents.master.master import WikiAgent
-from memory.manager import list_threads, load_history, delete_thread
+import src.styles
+from src.agents.master.master import WikiAgent
+from src.memory.manager import list_threads, load_history, delete_thread
 
 LAUNCH_STYLE = {"theme": styles.THEME, "css": styles.CSS, "head": styles.HEAD}
 
@@ -394,4 +393,4 @@ with gr.Blocks(title="Wiki Agent") as ui:
 
 if __name__ == "__main__":
     # Gradio 6: theme/css/head are launch() arguments, not Blocks() arguments.
-    ui.launch(inbrowser=True, **LAUNCH_STYLE)
+    ui.launch(inbrowser=True, **LAUNCH_STYLE, server_port=7860)
