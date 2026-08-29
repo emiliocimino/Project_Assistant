@@ -3,6 +3,7 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from contextlib import AsyncExitStack
 from pydantic import BaseModel, Field
 from loguru import logger
+import asyncio
 
 class EvaluatorOutput(BaseModel):
     feedback: str = Field(description="Feedback on the assistant's response")
