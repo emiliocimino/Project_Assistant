@@ -1,6 +1,6 @@
 services:
   eurofmx_manager:
-    image: ghcr.io/emiliocimino/project_assistant:0.1.0-dev-9c1fb20
+    image: ghcr.io/emiliocimino/project_assistant:latest
     container_name: project_assistant
     environment:
       - API_KEY=${API_KEY}
@@ -10,6 +10,8 @@ services:
       - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
       - LANGSMITH_API_KEY=&{LANGSMITH_API_KEY}
       - LANGSMITH_PROJECT="Project Assistant"
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
     ports:
       - "7860:7860"
     volumes:
