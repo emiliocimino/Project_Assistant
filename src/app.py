@@ -17,11 +17,11 @@ from src import DATA_DIR
 
 import gradio as gr
 
-import src.styles
+from src.styles import THEME, CSS, HEAD
 from src.agents.master.master import WikiAgent
 from src.memory.manager import list_threads, load_history, delete_thread
 
-LAUNCH_STYLE = {"theme": styles.THEME, "css": styles.CSS, "head": styles.HEAD}
+LAUNCH_STYLE = {"theme": THEME, "css": CSS, "head": HEAD}
 
 HEADER = """
 <div id="header">
