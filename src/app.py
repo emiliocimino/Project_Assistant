@@ -149,8 +149,20 @@ def start_enrich_ui(pdf_file, history):
     a message fire into the graph while an enrich() run is mid-flight on the
     same thread is a race, not a supported concurrent use of the checkpointer.
     """
+
     if pdf_file is None:
         return history, gr.update(interactive=True), gr.update(interactive=True)
+
+    filename = os.path.basename(pdf_file)
+    gr.Info(f"Uploading {filename}...")
+    history = history + [
+        {"role": "user", "content": f"Uploaded: {filename}"},
+        {
+            "role": "assistant",
+            "content": f"Reading **{filename}** and updating the wiki now. "
+                       f"This can take a few minutes for larger files...",
+        },
+    ]
 
     return history, gr.update(interactive=False), gr.update(interactive=False)
 

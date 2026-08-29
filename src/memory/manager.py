@@ -96,6 +96,10 @@ async def load_history(thread_id: str) -> list[dict]:
             if role and content:
                 history.append({"role": role, "content": content})
         return history
+    except aiosqlite.OperationalError as e:
+        if "no such table" in str(e):
+            return []
+        raise
     finally:
         await conn.close()
 
