@@ -122,7 +122,10 @@ async def send_message(agent, message, history, mode):
         success_criteria = "The file is entirely read and the wiki entirely updated"
         history = await agent.run_turn(message, success_criteria, history)
     else:
-        success_criteria = "The question is answered correctly and completely with information from the wiki"
+        success_criteria = """
+        The question is answered correctly and completely with information from the wiki. 
+        If no file is found, say that you don't know the answer.
+        """
         history = await agent.run_turn(message, success_criteria, history)
     paused = getattr(agent, "paused", False)
 

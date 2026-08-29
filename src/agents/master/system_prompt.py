@@ -92,6 +92,8 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     IMPORTANT: Before editing any file or creating new folders, make sure it exists. If the file already exist, read it
      to gather existing information and update them. Avoid deleting content inside, rather update it by adding a 
      [DATETIME] - EDIT: tag.
+    IMPORTANT: If you cannot find the information in your files or you notice the folder is empty do not search more than 3 times in different location.
+     Then, if not found, just answer you don't know the information searched or that it is necessary to update the wiki
 
     Today is: {datetime.today().strftime('%Y-%m-%d %H:%M')}
     """
