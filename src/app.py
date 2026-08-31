@@ -64,6 +64,7 @@ async def new_conversation():
         agent,                          # agent_state
         [],                             # chatbot cleared
         gr.update(visible=False),       # approve button hidden
+        gr.update(visible=False),       # reject button hidden
         gr.update(interactive=True),    # ask button enabled
         gr.update(value=None),          # pdf uploader cleared
         render_session_tag(thread_id),  # session tag
@@ -98,16 +99,21 @@ async def resume_conversation(thread_id):
     """
     if not thread_id:
         return (
-            None, [], gr.update(visible=False), gr.update(interactive=True),
+            None, [], gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True),
             gr.update(value=None), render_session_tag("none" + "-" * 8),
         )
     agent = await WikiAgent.setup(thread_id)
     history = await load_history(thread_id)
     return (
-        agent, history, gr.update(visible=False), gr.update(interactive=True),
+        agent, history, gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True),
         gr.update(value=None), render_session_tag(thread_id),
     )
 
+def pre_send_message(message, history):
+    new_history = history + [
+        {"role": "user", "content": message},
+    ]
+    return "", new_history, message
 
 async def send_message(agent, message, history, mode):
     """Wired to the chat textbox/button. Which agent method gets called
@@ -117,11 +123,15 @@ async def send_message(agent, message, history, mode):
     HumanInTheLoopMiddleware for actual file edits/moves either way; the
     difference is the success-criteria framing given to the model, not a
     hard permission wall.
+
+    History is not passed entirely due to message mismatch
     """
     if agent is None or not message:
-        return history, gr.update(visible=False), agent, message
+        return history, gr.update(visible=False), gr.update(visible=False), agent, message
     if mode == "Edit":
-        success_criteria = "The file is entirely read and the wiki entirely updated"
+        success_criteria = """
+        The file is entirely read and the wiki entirely updated if pieces of information are found, accordingly with user choices
+        """
         history = await agent.run_turn(message, success_criteria, history)
     else:
         success_criteria = """
@@ -131,7 +141,7 @@ async def send_message(agent, message, history, mode):
         history = await agent.run_turn(message, success_criteria, history)
     paused = getattr(agent, "paused", False)
 
-    return history, gr.update(visible=paused), agent, ""
+    return history, gr.update(visible=paused), gr.update(visible=paused), agent, ""
 
 
 def start_enrich_ui(pdf_file, history):
@@ -146,26 +156,8 @@ def start_enrich_ui(pdf_file, history):
     if pdf_file is None:
         return history, gr.update(interactive=True), gr.update(interactive=True)
 
-    filename = os.path.basename(pdf_file)
-    gr.Info(f"Uploading {filename}...")
-    history = history + [
-        {"role": "user", "content": f"Uploaded: {filename}"},
-        {
-            "role": "assistant",
-            "content": f"Reading **{filename}** and updating the wiki now. "
-                       f"This can take a few minutes for larger files...",
-        },
-    ]
-
-    return history, gr.update(interactive=False), gr.update(interactive=False)
-
-
-async def enrich_file(agent, pdf_file, history):
-    """Runs the actual PDF processing and calls WikiAgent.enrich."""
-    if agent is None or pdf_file is None:
-        return history, gr.update(visible=False), agent
-
     filename = os.path.basename(pdf_file).split("/")[-1].replace(" ", "_")
+    gr.Info(f"Uploading {filename}...")
 
     list_names = []
     with open(pdf_file, "rb") as f:
@@ -179,10 +171,31 @@ async def enrich_file(agent, pdf_file, history):
                     output.write(outputStream)
             list_names.append(str(composite_name))
 
-    uploading_message = (f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of file" +
-                         "\n".join(list_names))
+    uploading_message = (
+                f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of file" +
+                "\n".join(list_names))
 
-    return await send_message(agent, uploading_message, history, "Edit")
+    filename = os.path.basename(pdf_file)
+
+    history = history + [
+        {"role": "user", "content": uploading_message},
+        {
+            "role": "assistant",
+            "content": f"Reading **{filename}** and updating the wiki now. "
+                       f"This can take a few minutes for larger files...",
+        },
+    ]
+
+    return history, gr.update(interactive=False), gr.update(interactive=False), uploading_message
+
+
+async def enrich_file(agent, pdf_file, history, uploading_message):
+    """Runs the actual PDF processing and calls WikiAgent.enrich."""
+    if agent is None or pdf_file is None:
+        return history, gr.update(visible=False), gr.update(visible=False), agent
+
+    # Add mock message here to match send_message
+    return await send_message(agent, uploading_message, history.append({"role":"user", "content":""}), "Edit")
 
 
 def finish_enrich_ui():
@@ -191,13 +204,19 @@ def finish_enrich_ui():
     return gr.update(value=None, interactive=True), gr.update(interactive=True)
 
 
-async def approve(agent, history):
+async def approve(agent, history, action: str):
     """Continues a turn that paused for human-in-the-loop approval."""
     if agent is None:
-        return history, gr.update(visible=False), agent
-    history = await agent.resume(history)
+        return history, gr.update(visible=False), gr.update(visible=False), agent
+    action = action.lower()
+    decisions = [{"type": action, "message": "Rejected: Do not modify file"}]
+    if action == "approve":
+        decisions= [{"type": action.lower()}]
+    history = await agent.resume(history, decisions)
     paused = getattr(agent, "paused", False)
-    return history, gr.update(visible=paused), agent
+    return history, gr.update(visible=paused), gr.update(visible=paused), agent
+
+
 
 
 def watch_todos(agent):
@@ -261,7 +280,7 @@ async def confirm_delete(thread_id, agent):
     """
     if not thread_id:
         return (
-            None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+            None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
             gr.update(visible=False), None, gr.update(),
         )
 
@@ -285,6 +304,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
     gr.HTML(HEADER)
     session_tag = gr.HTML(render_session_tag("pending" + "-" * 8), visible=False) # TODO: Remove
     agent_state = gr.State(delete_callback=free_resources)
+    pending_message = gr.State("")
     delete_target = gr.State(None)
 
     with gr.Group(visible=False, elem_id="delete-modal") as delete_modal:
@@ -329,23 +349,27 @@ with gr.Blocks(title="Wiki Agent") as ui:
                                 elem_id="upload-button",
                                 interactive=False,
                             )
-                            message = gr.Textbox(
+                            text = gr.Textbox(
                                 show_label=False, placeholder="Ask about the wiki...", scale=4, max_lines=2
                             )
                             ask_button = gr.Button(
                                 "💬", scale=1, interactive=False, elem_id="ask-button"
                             )
+                        with gr.Row():
+                            approve_button = gr.Button(
+                                "Approve", visible=False, elem_id="approve-button"
+                            )
+                            reject_button = gr.Button(
+                                "Reject", visible=False, elem_id="approve-button"
+                            )
                 with gr.Column(scale=1):
                     gr.HTML('<div class="panel-tab">Case file — plan</div>')
                     todos_panel = gr.HTML(render_todos([]), elem_id="plan-panel")
 
-            approve_button = gr.Button(
-                "Approve and continue", visible=False, elem_id="approve-button"
-            )
 
-    timer = gr.Timer(1)
+    timer = gr.Timer(0.1)
 
-    outputs = [agent_state, chatbot, approve_button, ask_button, pdf_upload, session_tag]
+    outputs = [agent_state, chatbot, approve_button, reject_button, ask_button, pdf_upload, session_tag]
 
     # 1) New conversation -> instantiate a fresh WikiAgent on a fresh thread,
     # then refresh the sidebar so the new thread appears in the list.
@@ -383,22 +407,33 @@ with gr.Blocks(title="Wiki Agent") as ui:
     # Refreshed after: a new thread's first turn is what actually creates its
     # first checkpoint row, so this is the first point the thread can show up
     # in the sidebar at all.
-    message.submit(
-        send_message, [agent_state, message, chatbot, mode_switch],
-        [chatbot, approve_button, agent_state, message],
+    text.submit(
+        pre_send_message,
+        [text, chatbot],
+        [text, chatbot, pending_message]
+    ).then(
+        send_message, [agent_state, pending_message, chatbot, mode_switch],
+        [chatbot, approve_button, reject_button, agent_state, pending_message],
     ).then(refresh_sessions, None, [session_list])
+
     ask_button.click(
-        send_message, [agent_state, message, chatbot, mode_switch],
-        [chatbot, approve_button, agent_state, message],
+        pre_send_message,
+        [text, chatbot],
+        [text, chatbot, pending_message]
+    ).then(
+        send_message, [agent_state, pending_message, chatbot, mode_switch],
+        [chatbot, approve_button, reject_button, agent_state, pending_message],
     ).then(refresh_sessions, None, [session_list])
-    approve_button.click(approve, [agent_state, chatbot], [chatbot, approve_button, agent_state])
+
+    approve_button.click(approve, [agent_state, chatbot, approve_button], [chatbot, approve_button, reject_button, agent_state])
+    reject_button.click(approve, [agent_state, chatbot, reject_button], [chatbot, approve_button, reject_button, agent_state])
 
     # 3) Upload button (Edit mode only) calling "enrich" as soon as a file is
     # submitted. Three stages: announce + lock, do the work, unlock + clear + refresh.
     pdf_upload.upload(
-        start_enrich_ui, [pdf_upload, chatbot], [chatbot, pdf_upload, ask_button]
+        start_enrich_ui, [pdf_upload, chatbot], [chatbot, pdf_upload, ask_button, pending_message]
     ).then(
-        enrich_file, [agent_state, pdf_upload, chatbot], [chatbot, approve_button, agent_state]
+        enrich_file, [agent_state, pdf_upload, chatbot, pending_message], [chatbot, approve_button, reject_button, agent_state, pending_message]
     ).then(
         finish_enrich_ui, None, [pdf_upload, ask_button]
     ).then(refresh_sessions, None, [session_list])

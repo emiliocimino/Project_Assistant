@@ -93,6 +93,8 @@ class WikiAgent:
         self.success_criteria = success_criteria or "The answer should be clear, correct and complete"
         self.attempts = 0
         self.todos = []
+        if history is None:
+            history = []
         payload = {
             "messages": [
                 {
@@ -101,11 +103,11 @@ class WikiAgent:
                 }
             ]
         }
-        return await self._advance(payload, history + [{"role": "user", "content": message}])
+        return await self._advance(payload, history)
 
-    async def resume(self, history: list) -> list:
+    async def resume(self, history: list, decisions: list) -> list:
         """Approve the actions the worker paused on, and continue the turn."""
-        payload = Command(resume={"decisions": [{"type": "approve"}] * self.pending_actions})
+        payload = Command(resume={"decisions": decisions * self.pending_actions})
         return await self._advance(payload, history)
 
     async def _advance(self, payload, history: list) -> list:
