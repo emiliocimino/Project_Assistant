@@ -164,7 +164,7 @@ class WikiAgent:
         Also decide whether the assistant needs more input from the user, either because it asked a question,
         needs clarification, or seems stuck. Give brief, concrete feedback.
 
-        Your answer is a JSON answer, no code, no markdown, following the {EvaluatorOutput.model_json_schema()} structure:
+        Your answer is a JSON structure, no code, no markdown, following the {EvaluatorOutput.model_json_schema()} structure:
         """ + """
         Example:  
         { 
@@ -172,7 +172,8 @@ class WikiAgent:
         "property2": "value2",
         ...
         }
-
+        
+        IMPORTANT: First token of your answer is {
         """
         return await self.evaluator.ainvoke(prompt)
 

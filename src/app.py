@@ -16,18 +16,20 @@ from src.agents.master.master import WikiAgent
 from src.memory.manager import list_threads, load_history, delete_thread
 
 LAUNCH_STYLE = {"theme": THEME, "css": CSS, "head": HEAD}
+project_title = os.getenv("PROJECT_TITLE", "Project")
 
-HEADER = """
+
+HEADER = f"""
 <div id="header">
     <div class="context-label">European Projects Office</div>
-    <h1>EuroFMX Agent</h1>
+    <h1>{project_title} Agent</h1>
 </div>
 """
 
 EDIT_BANNER = """
 <div class="edit-banner">
     <strong>Edit mode is active.</strong>
-    The AI can make mistakes and may create or modify wiki files directly from this chat.
+    AI Agents can make mistakes and may create or modify wiki files directly from this chat.
 </div>
 """
 
@@ -280,7 +282,7 @@ async def confirm_delete(thread_id, agent):
 
 with gr.Blocks(title="Wiki Agent") as ui:
     gr.HTML(HEADER)
-    session_tag = gr.HTML(render_session_tag("pending" + "-" * 8))
+    session_tag = gr.HTML(render_session_tag("pending" + "-" * 8), visible=False) # TODO: Remove
     agent_state = gr.State(delete_callback=free_resources)
     delete_target = gr.State(None)
 
@@ -290,8 +292,8 @@ with gr.Blocks(title="Wiki Agent") as ui:
             with gr.Row():
                 cancel_delete_btn = gr.Button("Cancel")
                 confirm_delete_btn = gr.Button("Delete", variant="stop")
-    with gr.Row():
 
+    with gr.Row():
         with gr.Column(scale=1, min_width=220, elem_id="sessions-sidebar"):
             new_conv_button = gr.Button(
                 "New conversation", elem_id="new-conv-button", variant="primary"
@@ -313,9 +315,8 @@ with gr.Blocks(title="Wiki Agent") as ui:
 
             with gr.Row():
                 with gr.Column(scale=3):
-                    gr.HTML('<div class="panel-tab">Consultation</div>')
                     chatbot = gr.Chatbot(
-                        label="Wiki Agent", height=420, elem_id="chat",
+                        label="Wiki Agent", height="60vh", elem_id="chat",
                         show_label=False,
                     )
 
@@ -328,7 +329,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
                                 interactive=False,
                             )
                             message = gr.Textbox(
-                                show_label=False, placeholder="Ask about the wiki...", scale=4
+                                show_label=False, placeholder="Ask about the wiki...", scale=4, max_lines=2
                             )
                             ask_button = gr.Button(
                                 "💬", scale=1, interactive=False, elem_id="ask-button"

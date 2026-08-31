@@ -148,6 +148,9 @@ accidentally restyle the "Recent sessions" title. `:has()` needs a
 reasonably current browser (Chrome/Firefox/Safari 2023+); if this doesn't
 visually apply, that's the first thing to check, not the class names.
 */
+#session-list .wrap {
+    max-height: 40vh;
+}
 #session-list input[type="radio"] {
     position: absolute;
     opacity: 0;
@@ -356,7 +359,7 @@ inside this pill flattened regardless of Gradio's internal wrapper structure. */
 #ask-panel {
     background: var(--card) !important;
     border: 1px solid var(--line) !important;
-    border-radius: 999px !important;
+    border-radius: 20px !important;
     padding: 0.3rem 0.5rem !important;
     box-shadow: none !important;
     margin-top: 0 !important;

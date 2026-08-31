@@ -64,7 +64,6 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     > Description of the Task, its Task Leader, and the Partners involved.
     > Also records progress and relevant updates concerning the Task.
 
-
     #### Assets.md
     > Documentation and references for assets developed within the Task for the Partners.
 
@@ -85,8 +84,23 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     #### Completed
     > Folder containing TODOs that have been completed.
 
-    ##### TodoX.md
+    ##### [date_start - date_end] TodoX.md
     > A completed TODO moved from the TODOs folder after completion.
+    
+    # Results
+    > Folder containing project results
+    
+    ## Milestones
+    > Folder containing Milestones
+    
+    ### Milestone_X.md
+    > File containing milestone objective, linked with tasks, partners and assets
+    
+    ## Reviews 
+    > Folder containing review meetings 
+    
+    ### Review_M_X.md
+    > Review meeting file, containing partner's contribution, updatable with review results and suggestions. Links with partners, assets, tasks, milestones.
 
     IMPORTANT: Do not use the tool pdf_evidence with operation "render_page"
     IMPORTANT: Before editing any file or creating new folders, make sure it exists. If the file already exist, read it

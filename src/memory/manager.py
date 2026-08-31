@@ -4,7 +4,7 @@ import aiosqlite
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 
-DB_PATH = os.path.join(MEMORY_DIR, "memory.db")
+DB_PATH = os.path.join(MEMORY_DIR, "../conversations/memory.db")
 
 async def get_sqlite_connection():
     if not os.path.isdir(MEMORY_DIR):

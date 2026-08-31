@@ -5,6 +5,7 @@ services:
     environment:
       - API_KEY=${API_KEY}
       - API_URL=https://ollama.com/v1
+      - PROJECT_TITLE=EuroFMX
       - MODEL_NAME="gemma4:31b-cloud"
       - LANGSMITH_TRACING=false
       - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
@@ -16,3 +17,4 @@ services:
       - "7860:7860"
     volumes:
       - ./data:/home/src/data
+      - ./conversations:/home/src/conversations
