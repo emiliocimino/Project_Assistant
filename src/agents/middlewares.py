@@ -13,6 +13,7 @@ class TolerateToolErrors(AgentMiddleware):
         try:
             return await handler(request)
         except Exception as error:
+            logger.error(f"Tool call failed: {error}. Try another approach.")
             return ToolMessage(
                 content=f"That tool call failed: {error}. Try another approach.",
                 tool_call_id=request.tool_call["id"],
@@ -46,11 +47,11 @@ class OverwriteGuardrail(AgentMiddleware):
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
         if tool_call["name"] == "create_folder" or tool_call["name"] == "write_file":
-            enquired_path = tool_call["path"]
+            enquired_path = tool_call["args"]["path"]
             if os.path.exists(enquired_path):
                 logger.info(f"[Middleware Guardrail]: {enquired_path} already exists")
                 return ToolMessage(
-                    content=f"File or Folder {enquired_path} exists. Proceed with Updates",
+                    content=f"File or Folder {enquired_path} already exists. It is not necessary to create it again",
                     tool_call_id=request.tool_call["id"],
                 )
         return await handler(request)

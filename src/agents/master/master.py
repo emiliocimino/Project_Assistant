@@ -71,7 +71,7 @@ class WikiAgent:
             system_prompt=BASE_SYSTEM_PROMPT,
             middleware=[
                 HumanInTheLoopMiddleware(
-                    interrupt_on={"edit_file": True, "move_file": True}
+                    interrupt_on={"move_file": True}
                 ),
                 TodoListMiddleware(),
                 ModelCallLimitMiddleware(run_limit=100),
