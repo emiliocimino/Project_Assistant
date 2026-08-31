@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 
 from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT
-from src.agents.middlewares import TolerateToolErrors, LogToolUsage, ImageToolGuardrail
+from src.agents.middlewares import TolerateToolErrors, LogToolUsage, ImageToolGuardrail, OverwriteGuardrail
 from src.memory.manager import get_sqlite_connection
 from src.agents.tools import get_tools, McpSessions, EvaluatorOutput
 from src import DATA_DIR
@@ -77,7 +77,8 @@ class WikiAgent:
                 ModelCallLimitMiddleware(run_limit=100),
                 TolerateToolErrors(),
                 LogToolUsage(),
-                ImageToolGuardrail()
+                ImageToolGuardrail(),
+                OverwriteGuardrail()
             ],
             checkpointer=checkpointer,
         )

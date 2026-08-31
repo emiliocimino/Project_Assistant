@@ -179,7 +179,8 @@ async def enrich_file(agent, pdf_file, history):
                     output.write(outputStream)
             list_names.append(str(composite_name))
 
-    uploading_message = "\n".join(list_names)
+    uploading_message = (f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of file" +
+                         "\n".join(list_names))
 
     return await send_message(agent, uploading_message, history, "Edit")
 
