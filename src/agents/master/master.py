@@ -80,7 +80,7 @@ class WikiAgent:
                 TodoListMiddleware(),
                 ModelCallLimitMiddleware(run_limit=100),
                 ImageToolGuardrail(),
-                OverwriteGuardrail(),
+                OverwriteGuardrail(sandbox=DATA_DIR),
                 TolerateToolErrors(),
                 LogToolUsage(),
             ],

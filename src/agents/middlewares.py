@@ -3,6 +3,7 @@ import os
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import ToolMessage
 from loguru import logger
+from pathlib import Path
 
 
 class TolerateToolErrors(AgentMiddleware):
@@ -45,14 +46,28 @@ class ImageToolGuardrail(AgentMiddleware):
 
 
 class OverwriteGuardrail(AgentMiddleware):
+    def __init__(self, sandbox: str | Path):
+        self.sandbox = Path(sandbox).resolve()
+
+    def _resolve_path(self, path: str) -> Path:
+        path = Path(path)
+
+        if path.is_absolute():
+            return path.resolve()
+
+        return (self.sandbox / path).resolve()
+
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
         name = tool_call["name"]
         args = tool_call["args"]
 
+        path = args.get("path")
+        if path:
+            path = self._resolve_path(path)
+
         if name == "create_folder":
-            path = args.get("path")  # confirm this is the real key from your debug log
-            if path and os.path.isdir(path):
+            if os.path.isdir(path):
                 logger.info(f"[OverwriteGuardrail] folder already exists: {path}")
                 return ToolMessage(
                     content=f"Folder {path} already exists. No need to create it again.",
@@ -60,7 +75,6 @@ class OverwriteGuardrail(AgentMiddleware):
                 )
 
         elif name == "write_file":
-            path = args.get("path")
             if path and os.path.isfile(path):
                 logger.info(f"[OverwriteGuardrail] file exists, redirecting to edit_file: {path}")
                 return ToolMessage(
