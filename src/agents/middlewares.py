@@ -46,12 +46,13 @@ class ImageToolGuardrail(AgentMiddleware):
 class OverwriteGuardrail(AgentMiddleware):
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
-        if tool_call["name"] == "create_folder" or tool_call["name"] == "write_file":
-            enquired_path = tool_call["args"]["path"]
-            if os.path.exists(enquired_path):
+        if tool_call["name"] in ("create_folder", "write_file"):
+            logger.debug(f"[OverwriteGuardrail] tool={tool_call['name']} args={tool_call['args']}")
+            enquired_path = tool_call["args"].get("path")
+            if enquired_path and os.path.exists(enquired_path):
                 logger.info(f"[Middleware Guardrail]: {enquired_path} already exists")
                 return ToolMessage(
-                    content=f"File or Folder {enquired_path} already exists. It is not necessary to create it again",
+                    content=f"File or Folder {enquired_path} already exists. Do not call {tool_call['name']} with path {tool_call['args']['path']} anymore.",
                     tool_call_id=request.tool_call["id"],
                 )
         return await handler(request)

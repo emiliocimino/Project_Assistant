@@ -75,10 +75,10 @@ class WikiAgent:
                 ),
                 TodoListMiddleware(),
                 ModelCallLimitMiddleware(run_limit=100),
+                ImageToolGuardrail(),
+                OverwriteGuardrail(),
                 TolerateToolErrors(),
                 LogToolUsage(),
-                ImageToolGuardrail(),
-                OverwriteGuardrail()
             ],
             checkpointer=checkpointer,
         )

@@ -154,7 +154,7 @@ def start_enrich_ui(pdf_file, history):
     """
 
     if pdf_file is None:
-        return history, gr.update(interactive=True), gr.update(interactive=True)
+        return history, gr.update(interactive=True), gr.update(interactive=True), gr.update(interactive=True)
 
     filename = os.path.basename(pdf_file).split("/")[-1].replace(" ", "_")
     gr.Info(f"Uploading {filename}...")
@@ -192,10 +192,9 @@ def start_enrich_ui(pdf_file, history):
 async def enrich_file(agent, pdf_file, history, uploading_message):
     """Runs the actual PDF processing and calls WikiAgent.enrich."""
     if agent is None or pdf_file is None:
-        return history, gr.update(visible=False), gr.update(visible=False), agent
+        return history, gr.update(visible=False), gr.update(visible=False), agent, uploading_message
 
-    # Add mock message here to match send_message
-    return await send_message(agent, uploading_message, history.append({"role":"user", "content":""}), "Edit")
+    return await send_message(agent, uploading_message, history, "Edit")
 
 
 def finish_enrich_ui():
@@ -215,8 +214,6 @@ async def approve(agent, history, action: str):
     history = await agent.resume(history, decisions)
     paused = getattr(agent, "paused", False)
     return history, gr.update(visible=paused), gr.update(visible=paused), agent
-
-
 
 
 def watch_todos(agent):
@@ -288,14 +285,14 @@ async def confirm_delete(thread_id, agent):
     sessions_update = await refresh_sessions()
 
     if agent is not None and getattr(agent, "thread_id", None) == thread_id:
-        agent, chat, approve_upd, ask_upd, pdf_upd, tag = await new_conversation()
+        agent, chat, approve_upd, reject_upd, ask_upd, pdf_upd, tag = await new_conversation()
     else:
-        agent, chat, approve_upd, ask_upd, pdf_upd, tag = (
-            agent, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+        agent, chat, approve_upd, reject_upd, ask_upd, pdf_upd, tag = (
+            agent, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
         )
 
     return (
-        agent, chat, approve_upd, ask_upd, pdf_upd, tag,
+        agent, chat, approve_upd, reject_upd, ask_upd, pdf_upd, tag,
         gr.update(visible=False), None, sessions_update,
     )
 
