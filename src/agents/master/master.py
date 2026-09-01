@@ -2,7 +2,9 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import (
     HumanInTheLoopMiddleware,
     ModelCallLimitMiddleware,
-    TodoListMiddleware)
+    TodoListMiddleware,
+    SummarizationMiddleware
+)
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
@@ -23,7 +25,11 @@ URL = os.getenv("API_URL")
 API_KEY = os.getenv("API_KEY")
 
 MAX_ATTEMPTS = 3
-
+MODEL = ChatOpenAI(
+            model=MODEL_NAME,
+            base_url=URL,
+            api_key=API_KEY
+)
 
 class WikiAgent:
     def __init__(self,
@@ -44,11 +50,7 @@ class WikiAgent:
         self.task = None
         self.success_criteria = None
         self.todos = []
-        self.evaluator = ChatOpenAI(
-            model=MODEL_NAME,
-            base_url=URL,
-            api_key=API_KEY
-        ).with_structured_output(EvaluatorOutput)
+        self.evaluator = MODEL.with_structured_output(EvaluatorOutput)
 
     @classmethod
     async def setup(cls, thread_id: str):
@@ -59,11 +61,7 @@ class WikiAgent:
 
         tools, sessions = await get_tools(sandbox=str(DATA_DIR))
         conn, checkpointer = await get_sqlite_connection()
-        model = ChatOpenAI(
-            model=MODEL_NAME,
-            base_url=URL,
-            api_key=API_KEY
-        )
+        model = MODEL
 
         graph = create_agent(
             model=model,
@@ -72,6 +70,12 @@ class WikiAgent:
             middleware=[
                 HumanInTheLoopMiddleware(
                     interrupt_on={"move_file": True}
+                ),
+                SummarizationMiddleware(
+                    model=MODEL,
+                    trigger=[("tokens", 4000), ("messages", 20)],
+                    keep=("messages", 10),
+                    summary_prompt="Summarize the content with focus on information rather than acknowledgments"
                 ),
                 TodoListMiddleware(),
                 ModelCallLimitMiddleware(run_limit=100),
