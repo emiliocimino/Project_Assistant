@@ -1,0 +1,20 @@
+services:
+  eurofmx_manager:
+    image: ghcr.io/emiliocimino/project_assistant:latest
+    container_name: project_assistant
+    environment:
+      - API_KEY=${API_KEY}
+      - API_URL=https://ollama.com/v1
+      - PROJECT_TITLE=EuroFMX
+      - MODEL_NAME="gemma4:31b-cloud"
+      - LANGSMITH_TRACING=false
+      - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+      - LANGSMITH_API_KEY=&{LANGSMITH_API_KEY}
+      - LANGSMITH_PROJECT="Project Assistant"
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./data:/home/src/data
+      - ./conversations:/home/src/conversations
