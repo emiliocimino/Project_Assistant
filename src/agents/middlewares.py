@@ -43,16 +43,30 @@ class ImageToolGuardrail(AgentMiddleware):
                 )
         return await handler(request)
 
+
 class OverwriteGuardrail(AgentMiddleware):
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
-        if tool_call["name"] in ("create_folder", "write_file"):
-            logger.debug(f"[OverwriteGuardrail] tool={tool_call['name']} args={tool_call['args']}")
-            enquired_path = tool_call["args"].get("path")
-            if enquired_path and os.path.exists(enquired_path):
-                logger.info(f"[Middleware Guardrail]: {enquired_path} already exists")
+        name = tool_call["name"]
+        args = tool_call["args"]
+
+        if name == "create_folder":
+            path = args.get("path")  # confirm this is the real key from your debug log
+            if path and os.path.isdir(path):
+                logger.info(f"[OverwriteGuardrail] folder already exists: {path}")
                 return ToolMessage(
-                    content=f"File or Folder {enquired_path} already exists. Do not call {tool_call['name']} with path {tool_call['args']['path']} anymore.",
-                    tool_call_id=request.tool_call["id"],
+                    content=f"Folder {path} already exists. No need to create it again.",
+                    tool_call_id=tool_call["id"],
                 )
+
+        elif name == "write_file":
+            path = args.get("path")
+            if path and os.path.isfile(path):
+                logger.info(f"[OverwriteGuardrail] file exists, redirecting to edit_file: {path}")
+                return ToolMessage(
+                    content=f"File {path} already exists. Use edit_file to update it "
+                            f"instead of write_file, to avoid overwriting existing content.",
+                    tool_call_id=tool_call["id"],
+                )
+
         return await handler(request)
