@@ -54,6 +54,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     ### Summary.md
     > Description of WP including its role in the project
     > Overview of its Tasks and Deliverables
+    > Strong Dependencies with other WPs
     > Link to results (when available)
 
     ### Task_X
@@ -61,7 +62,8 @@ BASE_SYSTEM_PROMPT = SystemMessage(
 
     #### Summary.md
     > Description of the Task, its Task Leader, and other Partners involved.
-    > Also records progress and relevant updates concerning the Task.
+    > Dependencies with other tasks
+    > Records of progresses and relevant updates concerning the Task.
 
     #### Assets.md
     > Documentation and references for assets developed within the Task for the Partners.

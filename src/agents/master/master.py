@@ -2,10 +2,10 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import (
     HumanInTheLoopMiddleware,
     ModelCallLimitMiddleware,
-    TodoListMiddleware,
-    SummarizationMiddleware
+    TodoListMiddleware
 )
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
@@ -26,9 +26,9 @@ API_KEY = os.getenv("API_KEY")
 
 MAX_ATTEMPTS = 3
 MODEL = ChatOpenAI(
-            model=MODEL_NAME,
-            base_url=URL,
-            api_key=API_KEY
+    model=MODEL_NAME,
+    base_url=URL,
+    api_key=API_KEY
 )
 
 class WikiAgent:
@@ -71,12 +71,6 @@ class WikiAgent:
                 HumanInTheLoopMiddleware(
                     interrupt_on={"move_file": True}
                 ),
-                SummarizationMiddleware(
-                    model=MODEL,
-                    trigger=[("tokens", 40000), ("messages", 20)],
-                    keep=("messages", 10),
-                    summary_prompt="Summarize the content with focus on information rather than acknowledgments"
-                ),
                 TodoListMiddleware(),
                 ModelCallLimitMiddleware(run_limit=100),
                 ImageToolGuardrail(),
@@ -103,7 +97,7 @@ class WikiAgent:
             "messages": [
                 {
                     "role": "user",
-                    "content": f"{message}\n\n",
+                    "content": f"{message}\n\nSuccess Criteria: {success_criteria}",
                 }
             ]
         }
