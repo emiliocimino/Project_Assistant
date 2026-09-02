@@ -73,7 +73,7 @@ class WikiAgent:
                 ),
                 SummarizationMiddleware(
                     model=MODEL,
-                    trigger=[("tokens", 4000), ("messages", 20)],
+                    trigger=[("tokens", 40000), ("messages", 20)],
                     keep=("messages", 10),
                     summary_prompt="Summarize the content with focus on information rather than acknowledgments"
                 ),
