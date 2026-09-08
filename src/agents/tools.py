@@ -3,7 +3,6 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from contextlib import AsyncExitStack
 from pydantic import BaseModel, Field
 from loguru import logger
-import asyncio
 
 
 class EvaluatorOutput(BaseModel):
@@ -78,11 +77,9 @@ async def get_tools(sandbox: str):
 
 if __name__ == "__main__":
     import asyncio
-    import json
 
     client = MultiServerMCPClient(mcp_connections("."))
     browser_tools = asyncio.run(client.get_tools())
     logger.info(f"Loaded {len(browser_tools)} browser tools:")
     for t in browser_tools:
-        print(" -", t.name)
-        # print(json.dumps(t.args_schema, indent=2))
+        print(" -", t)
