@@ -107,14 +107,7 @@ async def send_message(agent, message, history):
     if agent is None or not message:
         return history, gr.update(visible=False), gr.update(visible=False), agent, message
 
-    success_criteria = """
-    If files are provided, all files are entirely read. The wiki is updated with every piece of useful information found.
-    If a new information is provided, update the wiki with every piece of useful information provided by the user.
-    If a question is asked, the wiki is consulted and that question is answered in a complete, detailed way with information from the wiki. 
-    If information is not in wiki, sources are searched. If something is found in sources, update the wiki is updated. Otherwise, say the wiki does not contain the requested information.
-    No information is invented by you
-    """
-    history = await agent.run_turn(message, success_criteria, history)
+    history = await agent.run_turn(message, history)
     paused = getattr(agent, "paused", False)
 
     return history, gr.update(visible=paused), gr.update(visible=paused), agent, ""

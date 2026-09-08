@@ -83,12 +83,18 @@ class WikiAgent:
         return cls(conn, checkpointer, graph, thread_id, tools, sessions)
 
 
-    async def run_turn(self, message: str, success_criteria: str, history: list) -> list:
+    async def run_turn(self, message: str, history: list) -> list:
         """One turn of conversation: the worker attempts the task and the evaluator checks it,
         retrying with feedback up to MAX_ATTEMPTS. If the worker pauses for approval, this
         returns straight away with paused set, and resume() continues the same turn."""
         self.task = message
-        self.success_criteria = success_criteria or "The answer should be clear, correct and complete"
+        success_criteria = """
+            If files are provided, all files are entirely read. The wiki is updated with every piece of useful information found.
+            If a new information is provided, update the wiki with every piece of useful information provided by the user.
+            If a question is asked, an exhaustive research is conducted on wiki leveraging the known structure. The question is answered in a complete, detailed way with information from the wiki.
+            No information is invented by you and if the wiki does not contain any information, say so.
+            """
+        self.success_criteria = success_criteria
         self.attempts = 0
         self.todos = []
         if history is None:
