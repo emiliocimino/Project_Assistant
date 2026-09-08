@@ -132,3 +132,11 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     """
 
 )
+
+
+SUCCESS_CRITERIA = """
+If files are provided, all files are entirely read. The wiki is updated with every piece of useful information found.
+If a new information is provided, update the wiki with every piece of useful information provided by the user.
+If a question is asked, an exhaustive research is conducted on wiki leveraging the known structure. The question is answered in a complete, detailed way with information from the wiki.
+No information is invented by you and if the wiki does not contain any information, say so.
+"""

@@ -5,7 +5,6 @@ from langchain.agents.middleware import (
     TodoListMiddleware
 )
 from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
@@ -13,7 +12,7 @@ import aiosqlite
 import os
 from dotenv import load_dotenv
 
-from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT
+from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT, SUCCESS_CRITERIA
 from src.agents.middlewares import TolerateToolErrors, LogToolUsage, ImageToolGuardrail, OverwriteGuardrail
 from src.memory.manager import get_sqlite_connection
 from src.agents.tools import get_tools, McpSessions, EvaluatorOutput
@@ -48,7 +47,7 @@ class WikiAgent:
         self._sessions = sessions
         self._evaluator = None
         self.task = None
-        self.success_criteria = None
+        self.success_criteria = SUCCESS_CRITERIA
         self.todos = []
         self.evaluator = MODEL.with_structured_output(EvaluatorOutput)
 
@@ -88,13 +87,6 @@ class WikiAgent:
         retrying with feedback up to MAX_ATTEMPTS. If the worker pauses for approval, this
         returns straight away with paused set, and resume() continues the same turn."""
         self.task = message
-        success_criteria = """
-            If files are provided, all files are entirely read. The wiki is updated with every piece of useful information found.
-            If a new information is provided, update the wiki with every piece of useful information provided by the user.
-            If a question is asked, an exhaustive research is conducted on wiki leveraging the known structure. The question is answered in a complete, detailed way with information from the wiki.
-            No information is invented by you and if the wiki does not contain any information, say so.
-            """
-        self.success_criteria = success_criteria
         self.attempts = 0
         self.todos = []
         if history is None:
@@ -103,7 +95,7 @@ class WikiAgent:
             "messages": [
                 {
                     "role": "user",
-                    "content": f"{message}\n\nSuccess Criteria: {success_criteria}",
+                    "content": f"{message}\n\nSuccess Criteria: {self.success_criteria}",
                 }
             ]
         }
