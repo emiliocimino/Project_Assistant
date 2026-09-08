@@ -12,6 +12,7 @@ from src import DATA_DIR
 
 STATUS_LABEL = {"pending": "Open", "in_progress": "In progress", "completed": "Done"}
 
+
 def render_todos(todos):
     if not todos:
         return '<h3>Plan</h3><div class="placeholder">The agent will file its plan here as it works</div>'
@@ -25,7 +26,7 @@ def render_todos(todos):
             f'<span class="stamp {status}">{STATUS_LABEL.get(status, status)}</span>'
             f"</li>"
         )
-    return f'<h3>Plan</h3><ul>{"".join(rows)}</ul>'
+    return f"<h3>Plan</h3><ul>{''.join(rows)}</ul>"
 
 
 def render_session_tag(thread_id):
@@ -37,12 +38,12 @@ async def new_conversation():
     thread_id = str(uuid.uuid4())
     agent = await WikiAgent.setup(thread_id)
     return (
-        agent,                          # agent_state
-        [],                             # chatbot cleared
-        gr.update(visible=False),       # approve button hidden
-        gr.update(visible=False),       # reject button hidden
-        gr.update(interactive=True),    # ask button enabled
-        gr.update(value=None),          # pdf uploader cleared
+        agent,  # agent_state
+        [],  # chatbot cleared
+        gr.update(visible=False),  # approve button hidden
+        gr.update(visible=False),  # reject button hidden
+        gr.update(interactive=True),  # ask button enabled
+        gr.update(value=None),  # pdf uploader cleared
         render_session_tag(thread_id),  # session tag
     )
 
@@ -75,14 +76,24 @@ async def resume_conversation(thread_id):
     """
     if not thread_id:
         return (
-            None, [], gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True),
-            gr.update(value=None), render_session_tag("none" + "-" * 8),
+            None,
+            [],
+            gr.update(visible=False),
+            gr.update(visible=False),
+            gr.update(interactive=True),
+            gr.update(value=None),
+            render_session_tag("none" + "-" * 8),
         )
     agent = await WikiAgent.setup(thread_id)
     history = await load_history(thread_id)
     return (
-        agent, history, gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True),
-        gr.update(value=None), render_session_tag(thread_id),
+        agent,
+        history,
+        gr.update(visible=False),
+        gr.update(visible=False),
+        gr.update(interactive=True),
+        gr.update(value=None),
+        render_session_tag(thread_id),
     )
 
 
@@ -105,7 +116,13 @@ async def send_message(agent, message, history):
     History is not passed entirely due to message mismatch
     """
     if agent is None or not message:
-        return history, gr.update(visible=False), gr.update(visible=False), agent, message
+        return (
+            history,
+            gr.update(visible=False),
+            gr.update(visible=False),
+            agent,
+            message,
+        )
 
     history = await agent.run_turn(message, history)
     paused = getattr(agent, "paused", False)
@@ -123,7 +140,12 @@ def start_enrich_ui(pdf_file, history):
     """
 
     if pdf_file is None:
-        return history, gr.update(interactive=True), gr.update(interactive=True), gr.update(interactive=True)
+        return (
+            history,
+            gr.update(interactive=True),
+            gr.update(interactive=True),
+            gr.update(interactive=True),
+        )
 
     filename = os.path.basename(pdf_file).split("/")[-1].replace(" ", "_")
     gr.Info(f"Uploading {filename}...")
@@ -141,8 +163,9 @@ def start_enrich_ui(pdf_file, history):
             list_names.append(str(composite_name))
 
     uploading_message = (
-                f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of file" +
-                "\n".join(list_names))
+        f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of file"
+        + "\n".join(list_names)
+    )
 
     filename = os.path.basename(pdf_file)
 
@@ -151,17 +174,28 @@ def start_enrich_ui(pdf_file, history):
         {
             "role": "assistant",
             "content": f"Reading **{filename}** and updating the wiki now. "
-                       f"This can take a few minutes for larger files...",
+            f"This can take a few minutes for larger files...",
         },
     ]
 
-    return history, gr.update(interactive=False), gr.update(interactive=False), uploading_message
+    return (
+        history,
+        gr.update(interactive=False),
+        gr.update(interactive=False),
+        uploading_message,
+    )
 
 
 async def enrich_file(agent, pdf_file, history, uploading_message):
     """Runs the actual PDF processing and calls WikiAgent.enrich."""
     if agent is None or pdf_file is None:
-        return history, gr.update(visible=False), gr.update(visible=False), agent, uploading_message
+        return (
+            history,
+            gr.update(visible=False),
+            gr.update(visible=False),
+            agent,
+            uploading_message,
+        )
 
     return await send_message(agent, uploading_message, history, "Edit")
 
@@ -179,7 +213,7 @@ async def approve(agent, history, action: str):
     action = action.lower()
     decisions = [{"type": action, "message": "Rejected: Do not modify file"}]
     if action == "approve":
-        decisions= [{"type": action.lower()}]
+        decisions = [{"type": action.lower()}]
     history = await agent.resume(history, decisions)
     paused = getattr(agent, "paused", False)
     return history, gr.update(visible=paused), gr.update(visible=paused), agent
@@ -229,21 +263,51 @@ async def confirm_delete(thread_id, agent):
     """
     if not thread_id:
         return (
-            None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
-            gr.update(visible=False), None, gr.update(),
+            None,
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(visible=False),
+            None,
+            gr.update(),
         )
 
     await delete_thread(thread_id)
     sessions_update = await refresh_sessions()
 
     if agent is not None and getattr(agent, "thread_id", None) == thread_id:
-        agent, chat, approve_upd, reject_upd, ask_upd, pdf_upd, tag = await new_conversation()
+        (
+            agent,
+            chat,
+            approve_upd,
+            reject_upd,
+            ask_upd,
+            pdf_upd,
+            tag,
+        ) = await new_conversation()
     else:
         agent, chat, approve_upd, reject_upd, ask_upd, pdf_upd, tag = (
-            agent, gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+            agent,
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
         )
 
     return (
-        agent, chat, approve_upd, reject_upd, ask_upd, pdf_upd, tag,
-        gr.update(visible=False), None, sessions_update,
+        agent,
+        chat,
+        approve_upd,
+        reject_upd,
+        ask_upd,
+        pdf_upd,
+        tag,
+        gr.update(visible=False),
+        None,
+        sessions_update,
     )

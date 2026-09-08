@@ -26,7 +26,7 @@ class LogToolUsage(AgentMiddleware):
 
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
-        logger.info(f"Used tool: {tool_call["name"]} with args: {tool_call["args"]}")
+        logger.info(f"Used tool: {tool_call['name']} with args: {tool_call['args']}")
         return await handler(request)
 
 
@@ -49,14 +49,6 @@ class OverwriteGuardrail(AgentMiddleware):
     def __init__(self, sandbox: str | Path):
         self.sandbox = Path(sandbox).resolve()
 
-    def _resolve_path(self, path: str) -> Path:
-        path = Path(path)
-
-        if path.is_absolute():
-            return path.resolve()
-
-        return (self.sandbox / path).resolve()
-
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
         name = tool_call["name"]
@@ -64,7 +56,7 @@ class OverwriteGuardrail(AgentMiddleware):
 
         path = args.get("path")
         if path:
-            path = self._resolve_path(path)
+            path = resolve_path(path, self.sandbox)
 
         if name == "create_folder":
             if os.path.isdir(path):
@@ -76,11 +68,48 @@ class OverwriteGuardrail(AgentMiddleware):
 
         elif name == "write_file":
             if path and os.path.isfile(path):
-                logger.info(f"[OverwriteGuardrail] file exists, redirecting to edit_file: {path}")
+                logger.info(
+                    f"[OverwriteGuardrail] file exists, redirecting to edit_file: {path}"
+                )
                 return ToolMessage(
                     content=f"File {path} already exists. Use edit_file to update it "
-                            f"instead of write_file, to avoid overwriting existing content.",
+                    f"instead of write_file, to avoid overwriting existing content.",
                     tool_call_id=tool_call["id"],
                 )
 
         return await handler(request)
+
+
+class ResolvePDFSandbox(AgentMiddleware):
+    def __init__(self, sandbox: str | Path):
+        self.sandbox = Path(sandbox).resolve()
+
+    async def awrap_tool_call(self, request, handler):
+        tool_call = request.tool_call
+        name = tool_call["name"]
+        args = tool_call["args"]
+
+        new_sources = []
+        new_args = args.copy()
+        if "pdf" in name:
+            sources = args.get("sources", [])
+            for source in sources:
+                path = source.get("path")
+                if path:
+                    new_path = resolve_path(path, self.sandbox)
+                    new_source = source.copy()
+                    new_source["path"] = str(new_path)
+                    new_sources.append(new_source)
+            new_args["sources"] = new_sources
+            tool_call["args"] = new_args
+
+        return await handler(request)
+
+
+def resolve_path(path: str, sandbox: Path) -> Path:
+    path = Path(path)
+
+    if path.is_absolute():
+        return path.resolve()
+
+    return (sandbox / path).resolve()

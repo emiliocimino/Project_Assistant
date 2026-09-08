@@ -28,6 +28,7 @@ dependencies = [
     "python-telegram-bot>=22.8",
     "requests>=2.33.1",
     "rich>=15.0.0",
+    "ruff>=0.16.6",
     "uvicorn[standard]>=0.46.0",
     "wikipedia>=1.4.0",
 ]

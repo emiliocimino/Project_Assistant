@@ -1,12 +1,26 @@
-"""Gradio app for the Wiki Agent. Run with: uv run app.py
-"""
+"""Gradio app for the Wiki Agent. Run with: uv run app.py"""
 
 import os
 import gradio as gr
 
-from src.handlers import render_todos, render_session_tag, new_conversation, refresh_sessions, resume_conversation, \
-    pre_send_message, send_message, start_enrich_ui, enrich_file, finish_enrich_ui, approve, watch_todos, \
-    free_resources, open_delete_modal, cancel_delete, confirm_delete
+from src.handlers import (
+    render_todos,
+    render_session_tag,
+    new_conversation,
+    refresh_sessions,
+    resume_conversation,
+    pre_send_message,
+    send_message,
+    start_enrich_ui,
+    enrich_file,
+    finish_enrich_ui,
+    approve,
+    watch_todos,
+    free_resources,
+    open_delete_modal,
+    cancel_delete,
+    confirm_delete,
+)
 from src import DATA_DIR
 from src.styles import THEME, CSS, HEAD
 
@@ -31,7 +45,9 @@ EDIT_BANNER = """
 
 with gr.Blocks(title="Wiki Agent") as ui:
     gr.HTML(HEADER)
-    session_tag = gr.HTML(render_session_tag("pending" + "-" * 8), visible=False) # TODO: Remove
+    session_tag = gr.HTML(
+        render_session_tag("pending" + "-" * 8), visible=False
+    )  # TODO: Remove
     agent_state = gr.State(delete_callback=free_resources)
     pending_message = gr.State("")
     delete_target = gr.State(None)
@@ -49,21 +65,28 @@ with gr.Blocks(title="Wiki Agent") as ui:
                 "New conversation", elem_id="new-conv-button", variant="primary"
             )
             session_list = gr.Radio(
-                choices=[], label="Recent sessions", elem_id="session-list",
+                choices=[],
+                label="Recent sessions",
+                elem_id="session-list",
                 interactive=True,
             )
             delete_session_button = gr.Button(
-                "🗑 Delete selected session", elem_id="delete-session-button",
+                "🗑 Delete selected session",
+                elem_id="delete-session-button",
                 variant="secondary",
             )
 
-        with gr.Column(scale=4, elem_id="app-shell", elem_classes=["mode_edit"]) as app_shell:
+        with gr.Column(
+            scale=4, elem_id="app-shell", elem_classes=["mode_edit"]
+        ) as app_shell:
             edit_banner = gr.HTML(EDIT_BANNER, visible=True, elem_id="edit-banner")
 
             with gr.Row():
                 with gr.Column(scale=3):
                     chatbot = gr.Chatbot(
-                        label="Wiki Agent", height="60vh", elem_id="chat",
+                        label="Wiki Agent",
+                        height="60vh",
+                        elem_id="chat",
                         show_label=False,
                     )
 
@@ -76,7 +99,10 @@ with gr.Blocks(title="Wiki Agent") as ui:
                                 interactive=True,
                             )
                             text = gr.Textbox(
-                                show_label=False, placeholder="Ask about the wiki...", scale=4, max_lines=2
+                                show_label=False,
+                                placeholder="Ask about the wiki...",
+                                scale=4,
+                                max_lines=2,
                             )
                             ask_button = gr.Button(
                                 "💬", scale=1, interactive=False, elem_id="ask-button"
@@ -92,17 +118,24 @@ with gr.Blocks(title="Wiki Agent") as ui:
                     gr.HTML('<div class="panel-tab">Case file — plan</div>')
                     todos_panel = gr.HTML(render_todos([]), elem_id="plan-panel")
 
-
     timer = gr.Timer(0.1)
 
-    outputs = [agent_state, chatbot, approve_button, reject_button, ask_button, pdf_upload, session_tag]
+    outputs = [
+        agent_state,
+        chatbot,
+        approve_button,
+        reject_button,
+        ask_button,
+        pdf_upload,
+        session_tag,
+    ]
 
     # 1) New conversation -> instantiate a fresh WikiAgent on a fresh thread,
     # then refresh the sidebar so the new thread appears in the list.
     ui.load(new_conversation, [], outputs).then(refresh_sessions, None, [session_list])
-    new_conv_button.click(
-        new_conversation, [], outputs
-    ).then(refresh_sessions, None, [session_list])
+    new_conv_button.click(new_conversation, [], outputs).then(
+        refresh_sessions, None, [session_list]
+    )
 
     # Picking a sidebar entry reattaches a WikiAgent to that thread_id and
     # rebuilds the chat log from its last checkpoint.
@@ -115,7 +148,8 @@ with gr.Blocks(title="Wiki Agent") as ui:
     )
     cancel_delete_btn.click(cancel_delete, None, [delete_modal, delete_target])
     confirm_delete_btn.click(
-        confirm_delete, [delete_target, agent_state],
+        confirm_delete,
+        [delete_target, agent_state],
         outputs + [delete_modal, delete_target, session_list],
     )
 
@@ -130,35 +164,45 @@ with gr.Blocks(title="Wiki Agent") as ui:
     # first checkpoint row, so this is the first point the thread can show up
     # in the sidebar at all.
     text.submit(
-        pre_send_message,
-        [text, chatbot],
-        [text, chatbot, pending_message]
+        pre_send_message, [text, chatbot], [text, chatbot, pending_message]
     ).then(
-        send_message, [agent_state, pending_message, chatbot],
+        send_message,
+        [agent_state, pending_message, chatbot],
         [chatbot, approve_button, reject_button, agent_state, pending_message],
     ).then(refresh_sessions, None, [session_list])
 
     ask_button.click(
-        pre_send_message,
-        [text, chatbot],
-        [text, chatbot, pending_message]
+        pre_send_message, [text, chatbot], [text, chatbot, pending_message]
     ).then(
-        send_message, [agent_state, pending_message, chatbot],
+        send_message,
+        [agent_state, pending_message, chatbot],
         [chatbot, approve_button, reject_button, agent_state, pending_message],
     ).then(refresh_sessions, None, [session_list])
 
-    approve_button.click(approve, [agent_state, chatbot, approve_button], [chatbot, approve_button, reject_button, agent_state])
-    reject_button.click(approve, [agent_state, chatbot, reject_button], [chatbot, approve_button, reject_button, agent_state])
+    approve_button.click(
+        approve,
+        [agent_state, chatbot, approve_button],
+        [chatbot, approve_button, reject_button, agent_state],
+    )
+    reject_button.click(
+        approve,
+        [agent_state, chatbot, reject_button],
+        [chatbot, approve_button, reject_button, agent_state],
+    )
 
     # 3) Upload button (Edit mode only) calling "enrich" as soon as a file is
     # submitted. Three stages: announce + lock, do the work, unlock + clear + refresh.
     pdf_upload.upload(
-        start_enrich_ui, [pdf_upload, chatbot], [chatbot, pdf_upload, ask_button, pending_message]
+        start_enrich_ui,
+        [pdf_upload, chatbot],
+        [chatbot, pdf_upload, ask_button, pending_message],
     ).then(
-        enrich_file, [agent_state, pdf_upload, chatbot, pending_message], [chatbot, approve_button, reject_button, agent_state, pending_message]
-    ).then(
-        finish_enrich_ui, None, [pdf_upload, ask_button]
-    ).then(refresh_sessions, None, [session_list])
+        enrich_file,
+        [agent_state, pdf_upload, chatbot, pending_message],
+        [chatbot, approve_button, reject_button, agent_state, pending_message],
+    ).then(finish_enrich_ui, None, [pdf_upload, ask_button]).then(
+        refresh_sessions, None, [session_list]
+    )
 
 
 if __name__ == "__main__":

@@ -5,12 +5,16 @@ from pydantic import BaseModel, Field
 from loguru import logger
 import asyncio
 
+
 class EvaluatorOutput(BaseModel):
     feedback: str = Field(description="Feedback on the assistant's response")
-    success_criteria_met: bool = Field(description="Whether the success criteria have been met")
+    success_criteria_met: bool = Field(
+        description="Whether the success criteria have been met"
+    )
     user_input_needed: bool = Field(
         description="True if the assistant has a question, needs clarification, or is stuck and needs the user"
     )
+
 
 def mcp_connections(sandbox: str) -> dict:
     """The MCP servers the Sidekick uses: a headed browser and a sandbox filesystem."""
@@ -26,6 +30,7 @@ def mcp_connections(sandbox: str) -> dict:
             "args": ["-y", "@modelcontextprotocol/server-filesystem", sandbox],
         },
     }
+
 
 class McpSessions:
     """Holds persistent MCP sessions open so the browser keeps its state between tool calls.
@@ -71,7 +76,6 @@ async def get_tools(sandbox: str):
     return mcp_tools, sessions
 
 
-
 if __name__ == "__main__":
     import asyncio
     import json
@@ -81,4 +85,4 @@ if __name__ == "__main__":
     logger.info(f"Loaded {len(browser_tools)} browser tools:")
     for t in browser_tools:
         print(" -", t.name)
-        print(json.dumps(t.args_schema, indent=2))
+        # print(json.dumps(t.args_schema, indent=2))
