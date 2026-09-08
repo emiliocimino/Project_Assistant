@@ -37,8 +37,8 @@ HEADER = f"""
 
 EDIT_BANNER = """
 <div class="edit-banner">
-    <strong>Edit mode is active.</strong>
-    AI Agents can make mistakes and may create or modify wiki files directly from this chat.
+    <strong>Warning:</strong>
+    AI Agents can make mistakes. Any new piece of information may modify the project knowledge base.
 </div>
 """
 
