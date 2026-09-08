@@ -32,7 +32,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     # Partners
     > Folder containing all project partners.
 
-    ## PartnerX
+    ## Partner_Name
     > Folder containing all information related to a specific partner.
 
     ### Role.md
@@ -42,19 +42,22 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     ### People
     > Folder containing profiles of people belonging to the partner.
 
-    #### PersonX.md
-    > Personal profile of a person, including a brief psychological/personality profile and relevant skills or competencies, if available.
+    #### Name(s)_Surname(s).md
+    > Personal profile of a person, structured as follows:
+    > Background and Competences (if available)
+    > Psychological Profile (if available)
+    > Role in project (living part)
 
     # WPs
     > Folder containing all Work Packages (WPs) in the project.
 
-    ## WP
+    ## WPX
     > Folder containing all information related to a specific Work Package.
 
     ### Summary.md
-    > Description of WP including its role in the project
-    > Overview of its Tasks and Deliverables
-    > Strong Dependencies with other WPs
+    > Description of WP including its objective in the project
+    > Overview of its Tasks and Deliverables (links)
+    > Collaborative Dependencies with other WPs
     > Link to results (when available)
 
     ### Task_X
@@ -65,8 +68,11 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     > Dependencies with other tasks
     > Records of progresses and relevant updates concerning the Task.
 
-    #### Assets.md
-    > Documentation and references for assets developed within the Task for the Partners.
+    #### Asset_name.md
+    > Documentation and references for a specific developed within the Task for the Partners. Structure as follows:
+    > Asset Description
+    > Involved partners
+    > Version updates and description
 
     #### Studies.md
     > References to relevant studies, research papers, articles, and other scientific or technical material related to the Task.

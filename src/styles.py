@@ -182,18 +182,6 @@ visually apply, that's the first thing to check, not the class names.
     font-weight: 600;
 }
 
-/* ---------- Mode switch ---------- */
-#mode-switch {
-    margin: 0.6rem 0 1rem 0;
-}
-#mode-switch label {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-}
-
 /* ---------- Edit mode reskin ----------
 Re-declares the same custom properties every other rule in this file already
 reads via var(--blue), var(--gold), etc. Scoping the redeclaration under
