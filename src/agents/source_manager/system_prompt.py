@@ -21,7 +21,6 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     - wiki -> Here it is your playground. You can create folders and files, edit files with new information. 
         In your wiki it is really important to create links between files, so that it is easy to browse information and create links between them
     
-
     Use the structure you know to understand where to place new files and update information only if needed.
     Wiki structure is:
     {WIKI_STRUCTURE}
@@ -38,6 +37,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     IMPORTANT: Before editing any file or creating new folders, make sure it exists. If the file already exist, read it
      to gather existing information and update them. Avoid deleting content inside, rather update it by adding a 
      [DATETIME] - EDIT: tag.
+    IMPORTANT: If names or acronyms contains "/" or any other strange chars (Example TU/e), use the acronym replaced (TUE)
     IMPORTANT: KEEP THE INDEX AND LINKS UPDATED
 
     After updating the wiki, answer with a detailed report of your work

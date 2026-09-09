@@ -26,7 +26,6 @@ source_manager_agent = create_agent(
     system_prompt=BASE_SYSTEM_PROMPT,
     tools=asyncio.run(get_filtered_tools(str(DATA_DIR))),
     middleware=[
-        ModelCallLimitMiddleware(run_limit=50),
         TodoListMiddleware(),
         OverwriteGuardrail(str(DATA_DIR)),
         LogToolUsage("Source Manager"),

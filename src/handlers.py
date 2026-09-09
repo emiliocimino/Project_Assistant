@@ -170,11 +170,11 @@ def start_enrich_ui(pdf_file, history):
                     with open(composite_name, "wb") as outputStream:
                         output.write(outputStream)
 
-                markdown = md_converter.convert(composite_name).markdown
-                output_name.write_text(
-                    markdown,
-                    encoding="utf-8"
-                )
+                    markdown = md_converter.convert(composite_name).markdown
+                    output_name.write_text(
+                        markdown,
+                        encoding="utf-8"
+                    )
                 list_names.append(str(output_name))
 
     uploading_message = (
