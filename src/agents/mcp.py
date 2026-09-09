@@ -20,11 +20,6 @@ class EvaluatorOutput(BaseModel):
 def mcp_connections(sandbox: str) -> dict:
     """The MCP servers the Sidekick uses: a headed browser and a sandbox filesystem."""
     return {
-        "citra": {
-            "transport": "stdio",
-            "command": "npx",
-            "args": ["-y", "@sylphx/citra"],
-        },
         "filesystem": {
             "transport": "stdio",
             "command": "npx",
@@ -70,15 +65,25 @@ class McpSessions:
         self._stop.set()
 
 
-async def get_tools(sandbox: str):
+async def get_mcp_tools_and_sessions(sandbox: str):
     """Return the full tool list (our tools plus the MCP server tools) and the session holder."""
     sessions = McpSessions(mcp_connections(sandbox))
     mcp_tools = await sessions.start()
     return mcp_tools, sessions
 
 
+async def get_filtered_tools(sandbox: str, allowed_tool_list: list | None=None) -> list:
+    mcp_client = MultiServerMCPClient(mcp_connections(sandbox))
+    gathered_tools = await mcp_client.get_tools()
+
+    if allowed_tool_list is None:
+        return gathered_tools
+    allowed_tools = [tool for tool in gathered_tools if tool.name in allowed_tool_list]
+
+    return allowed_tools
+
+
 if __name__ == "__main__":
-    import asyncio
 
     client = MultiServerMCPClient(mcp_connections("."))
     browser_tools = asyncio.run(client.get_tools())

@@ -1,9 +1,9 @@
 import os
+from pathlib import Path
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import ToolMessage
 from loguru import logger
-from pathlib import Path
 
 
 class TolerateToolErrors(AgentMiddleware):
@@ -23,26 +23,14 @@ class TolerateToolErrors(AgentMiddleware):
 
 class LogToolUsage(AgentMiddleware):
     """Log tool usage"""
+    def __init__(self, model_name):
+        self.model_name = model_name
 
     async def awrap_tool_call(self, request, handler):
         tool_call = request.tool_call
-        logger.info(f"Used tool: {tool_call['name']} with args: {tool_call['args']}")
+        logger.info(f"{self.model_name} used tool: {tool_call['name']} with args: {tool_call['args']}")
         return await handler(request)
 
-
-class ImageToolGuardrail(AgentMiddleware):
-    """Avoids use of images for OCR"""
-
-    async def awrap_tool_call(self, request, handler):
-        tool_call = request.tool_call
-        if tool_call["name"] == "pdf_evidence":
-            if tool_call["args"]["operation"] == "render_page":
-                logger.info("[Middleware Guardrail]: Skipping Image tool")
-                return ToolMessage(
-                    content=f"Rendering Tool is forbidden. Please use other tools that does not involve images",
-                    tool_call_id=request.tool_call["id"],
-                )
-        return await handler(request)
 
 
 class OverwriteGuardrail(AgentMiddleware):
@@ -67,7 +55,7 @@ class OverwriteGuardrail(AgentMiddleware):
                 )
 
         elif name == "write_file":
-            if path and os.path.isfile(path):
+            if os.path.isfile(path):
                 logger.info(
                     f"[OverwriteGuardrail] file exists, redirecting to edit_file: {path}"
                 )
@@ -79,31 +67,6 @@ class OverwriteGuardrail(AgentMiddleware):
 
         return await handler(request)
 
-
-class ResolvePDFSandbox(AgentMiddleware):
-    def __init__(self, sandbox: str | Path):
-        self.sandbox = Path(sandbox).resolve()
-
-    async def awrap_tool_call(self, request, handler):
-        tool_call = request.tool_call
-        name = tool_call["name"]
-        args = tool_call["args"]
-
-        new_sources = []
-        new_args = args.copy()
-        if "pdf" in name:
-            sources = args.get("sources", [])
-            for source in sources:
-                path = source.get("path")
-                if path:
-                    new_path = resolve_path(path, self.sandbox)
-                    new_source = source.copy()
-                    new_source["path"] = str(new_path)
-                    new_sources.append(new_source)
-            new_args["sources"] = new_sources
-            tool_call["args"] = new_args
-
-        return await handler(request)
 
 
 def resolve_path(path: str, sandbox: Path) -> Path:

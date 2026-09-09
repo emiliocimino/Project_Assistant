@@ -1,3 +1,7 @@
+import os
+
+import aiosqlite
+from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     HumanInTheLoopMiddleware,
@@ -8,21 +12,16 @@ from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
-import aiosqlite
-import os
-from dotenv import load_dotenv
 
+from src import DATA_DIR
 from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT, SUCCESS_CRITERIA
+from src.agents.master.tools import get_tools
+from src.agents.mcp import EvaluatorOutput, McpSessions, get_mcp_tools_and_sessions
 from src.agents.middlewares import (
-    TolerateToolErrors,
     LogToolUsage,
-    ImageToolGuardrail,
-    OverwriteGuardrail,
-    ResolvePDFSandbox,
+    TolerateToolErrors,
 )
 from src.memory.manager import get_sqlite_connection
-from src.agents.tools import get_tools, McpSessions, EvaluatorOutput
-from src import DATA_DIR
 
 load_dotenv(override=True)
 MODEL_NAME = os.getenv("MODEL_NAME")
@@ -62,7 +61,8 @@ class WikiAgent:
         a fresh graph/agent to that thread_id; AsyncSqliteSaver picks up wherever
         that thread's checkpoint history left off automatically."""
 
-        tools, sessions = await get_tools(sandbox=str(DATA_DIR))
+        tools = get_tools()
+        _, sessions = await get_mcp_tools_and_sessions(str(DATA_DIR))
         conn, checkpointer = await get_sqlite_connection()
         model = MODEL
 
@@ -71,14 +71,10 @@ class WikiAgent:
             tools=tools,
             system_prompt=BASE_SYSTEM_PROMPT,
             middleware=[
-                HumanInTheLoopMiddleware(interrupt_on={"move_file": True}),
                 TodoListMiddleware(),
-                ModelCallLimitMiddleware(run_limit=100),
-                ImageToolGuardrail(),
-                ResolvePDFSandbox(sandbox=DATA_DIR),
-                OverwriteGuardrail(sandbox=DATA_DIR),
+                ModelCallLimitMiddleware(run_limit=20),
                 TolerateToolErrors(),
-                LogToolUsage(),
+                LogToolUsage("Manager"),
             ],
             checkpointer=checkpointer,
         )
