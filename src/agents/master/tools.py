@@ -3,6 +3,7 @@ from langchain_core.tools import tool
 from src.agents.wiki_reader.wiki_reader import wiki_reader_agent
 import uuid
 
+
 @tool
 def wiki_reader_tool(query: str) -> str:
     """

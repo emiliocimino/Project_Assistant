@@ -20,4 +20,3 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     Today is: {datetime.today().strftime("%Y-%m-%d %H:%M")}
     """
 )
-

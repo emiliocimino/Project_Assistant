@@ -11,6 +11,7 @@ def mcp_connections(sandbox: str) -> dict:
         },
     }
 
+
 async def get_tools(sandbox: str):
     client = MultiServerMCPClient(mcp_connections(sandbox))
     browser_tools = await client.get_tools()
@@ -20,11 +21,12 @@ async def get_tools(sandbox: str):
         "list_directory",
         "directory_tree",
         "search_files",
-        "list_allowed_directories"
+        "list_allowed_directories",
     ]
     allowed_tools = [t for t in browser_tools if t.name in tool_list]
 
     return allowed_tools
+
 
 if __name__ == "__main__":
     import asyncio

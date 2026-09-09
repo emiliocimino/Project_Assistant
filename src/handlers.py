@@ -1,14 +1,17 @@
 import asyncio
 import html
 import os
+import tempfile
 import uuid
 
 import gradio as gr
+from markitdown import MarkItDown
+from pathlib import Path
 from PyPDF2 import PdfReader, PdfWriter
 
-from agents.master.master import WikiAgent
-from memory.manager import list_threads, load_history, delete_thread
 from src import DATA_DIR
+from src.agents.master.master import WikiAgent
+from src.memory.manager import delete_thread, list_threads, load_history
 
 STATUS_LABEL = {"pending": "Open", "in_progress": "In progress", "completed": "Done"}
 
@@ -150,20 +153,31 @@ def start_enrich_ui(pdf_file, history):
     filename = os.path.basename(pdf_file).split("/")[-1].replace(" ", "_")
     gr.Info(f"Uploading {filename}...")
 
-    list_names = []
-    with open(pdf_file, "rb") as f:
-        reader = PdfReader(f)
-        for i in range(len(reader.pages)):
-            composite_name = DATA_DIR / "sources" / f"page_{i}_{filename}"
-            if not os.path.isfile(composite_name):
-                output = PdfWriter()
-                output.add_page(reader.pages[i])
-                with open(composite_name, "wb") as outputStream:
-                    output.write(outputStream)
-            list_names.append(str(composite_name))
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        md_converter = MarkItDown()
+        list_names = []
+        tmp = Path(tmp_dir)
+        with open(pdf_file, "rb") as f:
+            reader = PdfReader(f)
+            for i in range(len(reader.pages)):
+                page_name = f"page_{i}_{filename}"
+                composite_name = tmp / page_name
+                output_name = DATA_DIR / "sources" / page_name.replace(".pdf", ".md")
+                if not os.path.isfile(output_name):
+                    output = PdfWriter()
+                    output.add_page(reader.pages[i])
+                    with open(composite_name, "wb") as outputStream:
+                        output.write(outputStream)
+
+                markdown = md_converter.convert(composite_name).markdown
+                output_name.write_text(
+                    markdown,
+                    encoding="utf-8"
+                )
+                list_names.append(str(output_name))
 
     uploading_message = (
-        f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of file"
+        f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of files:"
         + "\n".join(list_names)
     )
 
@@ -197,7 +211,7 @@ async def enrich_file(agent, pdf_file, history, uploading_message):
             uploading_message,
         )
 
-    return await send_message(agent, uploading_message, history, "Edit")
+    return await send_message(agent, uploading_message, history)
 
 
 def finish_enrich_ui():

@@ -24,11 +24,10 @@ wiki_reader_agent = create_agent(
     model=MODEL,
     system_prompt=BASE_SYSTEM_PROMPT,
     tools=asyncio.run(get_tools(str(WIKI_DIR))),
-    middleware = [
+    middleware=[
         TodoListMiddleware(),
         LogToolUsage(),
         TolerateToolErrors(),
     ],
-    checkpointer=MemorySaver()
+    checkpointer=MemorySaver(),
 )
-

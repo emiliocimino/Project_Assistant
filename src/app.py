@@ -1,28 +1,29 @@
 """Gradio app for the Wiki Agent. Run with: uv run app.py"""
 
 import os
+
 import gradio as gr
 
+from src import DATA_DIR
 from src.handlers import (
-    render_todos,
-    render_session_tag,
-    new_conversation,
-    refresh_sessions,
-    resume_conversation,
-    pre_send_message,
-    send_message,
-    start_enrich_ui,
-    enrich_file,
-    finish_enrich_ui,
     approve,
-    watch_todos,
-    free_resources,
-    open_delete_modal,
     cancel_delete,
     confirm_delete,
+    enrich_file,
+    finish_enrich_ui,
+    free_resources,
+    new_conversation,
+    open_delete_modal,
+    pre_send_message,
+    refresh_sessions,
+    render_session_tag,
+    render_todos,
+    resume_conversation,
+    send_message,
+    start_enrich_ui,
+    watch_todos,
 )
-from src import DATA_DIR
-from src.styles import THEME, CSS, HEAD
+from src.styles import CSS, HEAD, THEME
 
 LAUNCH_STYLE = {"theme": THEME, "css": CSS, "head": HEAD}
 project_title = os.getenv("PROJECT_TITLE", "Project")
