@@ -32,5 +32,4 @@ source_manager_agent = create_agent(
         LogToolUsage("Source Manager"),
         TolerateToolErrors(),
     ],
-    checkpointer=MemorySaver(),
 )

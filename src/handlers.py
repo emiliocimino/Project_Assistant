@@ -77,6 +77,7 @@ async def resume_conversation(thread_id):
     Known gap: if that thread was left mid human-in-the-loop approval, this
     does not detect or restore the pending-approval state.
     """
+    from loguru import logger
     if not thread_id:
         return (
             None,

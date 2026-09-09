@@ -38,5 +38,4 @@ wiki_reader_agent = create_agent(
         LogToolUsage("Wiki Reader"),
         TolerateToolErrors(),
     ],
-    checkpointer=MemorySaver(),
 )

@@ -14,9 +14,8 @@ async def wiki_reader_tool(query: str) -> str:
     :param query: The query to run
     :return: An answer from the wiki
     """
-    config = {"thread_id": str(uuid.uuid4())}
     answer = await wiki_reader_agent.ainvoke(
-        {"messages": [HumanMessage(query)]}, config=config
+        {"messages": [HumanMessage(query)]},
     )
     return answer["messages"][-1].content
 
@@ -29,10 +28,9 @@ async def source_manager_tool(query: str, file_paths: list[str]) -> str:
     :param file_paths: A list of file paths (if they exist), otherwise empty list
     :return: Summary of updated information
     """
-    config = {"thread_id": str(uuid.uuid4())}
     built_message = f"""Update the wiki with the following information : {query}.\n\n A list of filepath is here {"\n".join(file_paths)}"""
     answer = await source_manager_agent.ainvoke(
-        {"messages": [HumanMessage(built_message)]}, config=config
+        {"messages": [HumanMessage(built_message)]}
     )
     return answer["messages"][-1].content
 
