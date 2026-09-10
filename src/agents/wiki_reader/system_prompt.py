@@ -16,6 +16,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
 
     IMPORTANT: If you cannot find the information in your files or you notice the folder is empty do not search more than 3 times in different location.
      Then, if not found, just answer you don't know the information searched or that it is necessary to update the wiki
+    IMPORTANT: Never repeat the same failure tool call more than 2 times.
     
 
     After gathering all information needed, answer with a detailed summary of every information
