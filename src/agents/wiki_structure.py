@@ -75,13 +75,14 @@ WIKI_STRUCTURE = """
 > Folder containing Milestones
 
 ### Milestone_X.md
-> File containing milestone objective, linked with tasks, partners and assets
+> File containing a milestone objective, linked with tasks, partners and assets. X is the number.
 
 ## Reviews 
 > Folder containing review meetings 
 
-### Review_M_X.md
+### Review_MX.md
 > Review meeting file, containing partner's contribution, updatable with review results and suggestions. Links with partners, assets, tasks, milestones.
+> MX in name standas for MonthX, example M12
 
 ## Meetings
 > Folder containing internal project meeting
