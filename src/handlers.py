@@ -178,7 +178,7 @@ def start_enrich_ui(pdf_file, history):
                 list_names.append(str(output_name))
 
     uploading_message = (
-        f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of files:"
+        f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of files:\n\n"
         + "\n".join(list_names)
     )
 
