@@ -45,14 +45,17 @@ Ensure you have `uv` installed on your system.
 Create a `.env` file in the root directory and configure the required variables:
 ```dotenv 
 API_URL=https://ollama.com/v1 #Or any OpenAI compatible Providers
-API_KEY=your_api_key
+API_KEY=YOUR_PROVIDER_API_KEY
 MODEL_NAME="gemma4:31b-cloud" #Or any model with tool support
+
+# Project Title (Default: Project)
+PROJECT_TITLE=YOUR_PROJECT_NAME
 
 # OPTIONAL: LangSmith Tracing (Token consumption)
 LANGSMITH_TRACING=true
 LANGSMITH_ENDPOINT=https://api.smith.langchain.com
-LANGSMITH_API_KEY=your_langsmith_key
-LANGSMITH_PROJECT="Your Project Name"
+LANGSMITH_API_KEY=YOUR_LANGSMITH_API_KEY
+LANGSMITH_PROJECT=YOUR_PROJECT_NAME
 ```
 
 ### Installation & Execution
