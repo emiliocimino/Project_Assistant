@@ -6,6 +6,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 DB_PATH = os.path.join(MEMORY_DIR, "../conversations/memory.db")
 
+
 async def get_sqlite_connection():
     if not os.path.isdir(MEMORY_DIR):
         os.mkdir(MEMORY_DIR)
@@ -60,10 +61,12 @@ async def list_threads(limit: int = 30) -> list[dict]:
         for thread_id, _ in rows:
             config = {"configurable": {"thread_id": thread_id}}
             tup = await checkpointer.aget_tuple(config)
-            threads.append({
-                "thread_id": thread_id,
-                "label": _label_from_checkpoint_tuple(tup, thread_id),
-            })
+            threads.append(
+                {
+                    "thread_id": thread_id,
+                    "label": _label_from_checkpoint_tuple(tup, thread_id),
+                }
+            )
         return threads
     except aiosqlite.OperationalError as e:
         if "no such table" in str(e):

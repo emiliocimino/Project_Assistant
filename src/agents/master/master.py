@@ -1,23 +1,27 @@
+import os
+
+import aiosqlite
+from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     HumanInTheLoopMiddleware,
     ModelCallLimitMiddleware,
     TodoListMiddleware,
-    SummarizationMiddleware
 )
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
-import aiosqlite
-import os
-from dotenv import load_dotenv
 
-from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT
-from src.agents.middlewares import TolerateToolErrors, LogToolUsage, ImageToolGuardrail, OverwriteGuardrail
-from src.memory.manager import get_sqlite_connection
-from src.agents.tools import get_tools, McpSessions, EvaluatorOutput
 from src import DATA_DIR
+from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT, SUCCESS_CRITERIA
+from src.agents.master.tools import get_tools
+from src.agents.mcp import EvaluatorOutput, McpSessions, get_mcp_tools_and_sessions
+from src.agents.middlewares import (
+    LogToolUsage,
+    TolerateToolErrors,
+)
+from src.memory.manager import get_sqlite_connection
 
 load_dotenv(override=True)
 MODEL_NAME = os.getenv("MODEL_NAME")
@@ -25,21 +29,19 @@ URL = os.getenv("API_URL")
 API_KEY = os.getenv("API_KEY")
 
 MAX_ATTEMPTS = 3
-MODEL = ChatOpenAI(
-            model=MODEL_NAME,
-            base_url=URL,
-            api_key=API_KEY
-)
+MODEL = ChatOpenAI(model=MODEL_NAME, base_url=URL, api_key=API_KEY)
+
 
 class WikiAgent:
-    def __init__(self,
-                 conn: aiosqlite.Connection,
-                 checkpointer: AsyncSqliteSaver,
-                 graph: CompiledStateGraph,
-                 thread_id: str,
-                 tools: list[dict],
-                 sessions: McpSessions
-                 ):
+    def __init__(
+        self,
+        conn: aiosqlite.Connection,
+        checkpointer: AsyncSqliteSaver,
+        graph: CompiledStateGraph,
+        thread_id: str,
+        tools: list[dict],
+        sessions: McpSessions,
+    ):
         self._conn = conn
         self._checkpointer = checkpointer
         self._graph = graph
@@ -48,7 +50,7 @@ class WikiAgent:
         self._sessions = sessions
         self._evaluator = None
         self.task = None
-        self.success_criteria = None
+        self.success_criteria = SUCCESS_CRITERIA
         self.todos = []
         self.evaluator = MODEL.with_structured_output(EvaluatorOutput)
 
@@ -59,7 +61,8 @@ class WikiAgent:
         a fresh graph/agent to that thread_id; AsyncSqliteSaver picks up wherever
         that thread's checkpoint history left off automatically."""
 
-        tools, sessions = await get_tools(sandbox=str(DATA_DIR))
+        tools = get_tools()
+        _, sessions = await get_mcp_tools_and_sessions(str(DATA_DIR))
         conn, checkpointer = await get_sqlite_connection()
         model = MODEL
 
@@ -68,33 +71,20 @@ class WikiAgent:
             tools=tools,
             system_prompt=BASE_SYSTEM_PROMPT,
             middleware=[
-                HumanInTheLoopMiddleware(
-                    interrupt_on={"move_file": True}
-                ),
-                SummarizationMiddleware(
-                    model=MODEL,
-                    trigger=[("tokens", 4000), ("messages", 20)],
-                    keep=("messages", 10),
-                    summary_prompt="Summarize the content with focus on information rather than acknowledgments"
-                ),
                 TodoListMiddleware(),
-                ModelCallLimitMiddleware(run_limit=100),
-                ImageToolGuardrail(),
-                OverwriteGuardrail(sandbox=DATA_DIR),
+                ModelCallLimitMiddleware(run_limit=20),
                 TolerateToolErrors(),
-                LogToolUsage(),
+                LogToolUsage("Manager"),
             ],
             checkpointer=checkpointer,
         )
         return cls(conn, checkpointer, graph, thread_id, tools, sessions)
 
-
-    async def run_turn(self, message: str, success_criteria: str, history: list) -> list:
+    async def run_turn(self, message: str, history: list) -> list:
         """One turn of conversation: the worker attempts the task and the evaluator checks it,
         retrying with feedback up to MAX_ATTEMPTS. If the worker pauses for approval, this
         returns straight away with paused set, and resume() continues the same turn."""
         self.task = message
-        self.success_criteria = success_criteria or "The answer should be clear, correct and complete"
         self.attempts = 0
         self.todos = []
         if history is None:
@@ -103,7 +93,7 @@ class WikiAgent:
             "messages": [
                 {
                     "role": "user",
-                    "content": f"{message}\n\n",
+                    "content": f"{message}",
                 }
             ]
         }
@@ -118,7 +108,9 @@ class WikiAgent:
         config = {"configurable": {"thread_id": self.thread_id}}
         while True:
             result = None
-            async for result in self._graph.astream(payload, config=config, stream_mode="values"):
+            async for result in self._graph.astream(
+                payload, config=config, stream_mode="values"
+            ):
                 self.todos = result.get("todos", self.todos)
 
             if "__interrupt__" in result:
@@ -126,33 +118,50 @@ class WikiAgent:
                 self.paused = True
                 self.pending_actions = len(actions)
                 described = "\n".join(action["description"] for action in actions)
-                return history + [{"role": "assistant", "content": f"Waiting for your approval:\n{described}"}]
+                return history + [
+                    {
+                        "role": "assistant",
+                        "content": f"Waiting for your approval:\n{described}",
+                    }
+                ]
 
             self.paused = False
             reply = result["messages"][-1].content
             tools_used = [
-                call["name"] for m in result["messages"] for call in (getattr(m, "tool_calls", None) or [])
+                call["name"]
+                for m in result["messages"]
+                for call in (getattr(m, "tool_calls", None) or [])
             ]
             self.attempts += 1
 
-            verdict = await self.evaluate(self.task, self.success_criteria, reply, tools_used)
-            if verdict.success_criteria_met or verdict.user_input_needed or self.attempts >= MAX_ATTEMPTS:
-                return history + [
-                    {"role": "assistant", "content": reply}]
+            verdict = await self.evaluate(
+                self.task, self.success_criteria, reply, tools_used
+            )
+            if (
+                verdict.success_criteria_met
+                or verdict.user_input_needed
+                or self.attempts >= MAX_ATTEMPTS
+            ):
+                return history + [{"role": "assistant", "content": reply}]
             payload = {
                 "messages": [
                     {
                         "role": "user",
                         "content": f"Your last response did not meet the success criteria. "
-                                   f"Here is the feedback: {verdict.feedback}. Please keep working and address it.",
+                        f"Here is the feedback: {verdict.feedback}. Please keep working and address it.",
                     }
                 ]
             }
 
     async def evaluate(
-            self, message: str, success_criteria: str, last_reply: str, tools_used: list[str]
+        self,
+        message: str,
+        success_criteria: str,
+        last_reply: str,
+        tools_used: list[str],
     ) -> EvaluatorOutput:
-        prompt = f"""
+        prompt = (
+            f"""
         You decide whether an assistant has met the success criteria for a task.
 
         The user's request was:
@@ -172,7 +181,8 @@ class WikiAgent:
         needs clarification, or seems stuck. Give brief, concrete feedback.
 
         Your answer is a JSON structure, no code, no markdown, following the {EvaluatorOutput.model_json_schema()} structure:
-        """ + """
+        """
+            + """
         Example:  
         { 
         "property1": "value1",
@@ -182,6 +192,7 @@ class WikiAgent:
         
         IMPORTANT: First token of your answer is {
         """
+        )
         return await self.evaluator.ainvoke(prompt)
 
     async def cleanup(self):
