@@ -13,7 +13,7 @@ The **Wiki Agent** is an intelligent document management system designed to tran
 
 ## 🛠 Tech Stack
 
-- **Language**: Python >=3.12
+- **Language**: Python >=3.12, <3.14 (limitation on onnxruntime)
 - **Package Manager**: `uv`
 - **UI Framework**: [Gradio](https://gradio.app/)
 - **PDF Processing**: `MarkItDown`, `PyPDF2`
