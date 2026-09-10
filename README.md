@@ -96,3 +96,13 @@ docker-compose up -d --build
 0. Thanks [Ed Donner](https://github.com/ed-donner) for your Agentic AI Course
 1. This Readme is AI-generated but reviewed. It may contain errors.
 2. This project is developed with the LLM-Wiki approach, from a human, to humans, with AI support for bug fixing (and UI)
+
+### ⚠️ WARNING ⚠️
+**Share sensitive data with extreme care.** I strongly suggest to use well-documented providers and models with **clear no-retention policy**. 
+
+Alternatively, prefer use of **locally-deployed models** or **proprietary models**
+
+
+## License
+
+This project is licensed under the Apache 2.0 License. See [[License]] for information
