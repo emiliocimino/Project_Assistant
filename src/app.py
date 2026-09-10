@@ -97,6 +97,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
                                 label="🔗",
                                 file_types=[".pdf"],
                                 elem_id="upload-button",
+                                file_count="single",
                                 interactive=True,
                             )
                             text = gr.Textbox(
