@@ -105,4 +105,4 @@ Alternatively, prefer use of **locally-deployed models** or **proprietary models
 
 ## License
 
-This project is licensed under the Apache 2.0 License. See [[License]] for information
+This project is licensed under the Apache 2.0 License. See [License](License) for information
