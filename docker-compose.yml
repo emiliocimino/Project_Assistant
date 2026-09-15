@@ -9,10 +9,13 @@ services:
       - MODEL_NAME="gemma4:31b-cloud"
       - LANGSMITH_TRACING=false
       - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
-      - LANGSMITH_API_KEY=&{LANGSMITH_API_KEY}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
       - LANGSMITH_PROJECT="Project Assistant"
       - GRADIO_SERVER_NAME=0.0.0.0
       - GRADIO_SERVER_PORT=7860
+      - GRADIO_AUTH=true
+      - GRADIO_USERNAME=${GRADIO_USERNAME}
+      - GRADIO_PASSWORD=${GRADIO_PASSWORD}
     ports:
       - "7860:7860"
     volumes:

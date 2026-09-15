@@ -3,6 +3,7 @@
 import os
 
 import gradio as gr
+from dotenv import load_dotenv
 
 from src import DATA_DIR
 from src.handlers import (
@@ -209,6 +210,7 @@ with gr.Blocks(title="Wiki Agent") as ui:
 
 if __name__ == "__main__":
     from loguru import logger
+    load_dotenv(override=True)
 
     if not os.path.isdir(DATA_DIR):
         os.mkdir(DATA_DIR)
@@ -217,4 +219,12 @@ if __name__ == "__main__":
         os.mkdir(DATA_DIR / "sources")
 
     logger.info("Starting application...")
-    ui.launch(**LAUNCH_STYLE)
+
+    auth=None
+    if os.getenv("GRADIO_AUTH"):
+        username = os.getenv("GRADIO_USERNAME", "gradio")
+        pwd = os.getenv("GRADIO_PASSWORD", "gradio")
+        logger.info(f"Auth is: {username}, {pwd}")
+        auth = [(username, pwd)]
+
+    ui.launch(**LAUNCH_STYLE, auth=auth)
