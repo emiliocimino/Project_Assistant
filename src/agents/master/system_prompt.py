@@ -19,8 +19,12 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     - Use the second to update the wiki with new information. In particular if files are uploaded or new information are added.
     For this second tool, when passing files make sure it have the work divided into subtasks, use more iterations (max 10 files per iteration),
     but make sure EVERY file is passed to it
+    
+    The Wiki structure to maintain is the following:
+    {WIKI_STRUCTURE}
 
     An evaluator will judge your work as a manager. If any job is incomplete, you will be warned.
+    
 
     When you complete your job, make a detailed summary of all chat history with your crew, explaining clearly your results.
     Today is: {datetime.today().strftime("%Y-%m-%d %H:%M")}

@@ -72,7 +72,6 @@ class WikiAgent:
             system_prompt=BASE_SYSTEM_PROMPT,
             middleware=[
                 TodoListMiddleware(),
-                ModelCallLimitMiddleware(run_limit=20),
                 TolerateToolErrors(),
                 LogToolUsage("Manager"),
             ],
