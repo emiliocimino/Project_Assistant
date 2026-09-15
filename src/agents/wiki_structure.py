@@ -10,7 +10,7 @@ WIKI_STRUCTURE = """
 > Partner_name is the full name. In brackets its acronym.
 
 ### Role.md
-> A fair summary of the partner's role in the project.
+> A fair summary of the partner's role in the project. A partner is an organization, not a single person
 > Contains links to the relevant Work Packages (WPs) with allocated resources (Person Months), Tasks, and its team (PMs / Techincal People).
 
 ### People

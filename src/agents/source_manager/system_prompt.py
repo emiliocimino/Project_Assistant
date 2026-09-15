@@ -22,6 +22,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
         In your wiki it is really important to create links between files, so that it is easy to browse information and create links between them
     
     Use the structure you know to understand where to place new files and update information only if needed.
+    The following wiki structure must be respected.
     Wiki structure is:
     {WIKI_STRUCTURE}
     
@@ -33,7 +34,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     
     IMPORTANT: Your language is english. If prompted in other languages, remember to write the wiki in english.
     IMPORTANT: If a source file is provided, link the new information with the source file in square bracket (i.e: [source_file.md])
-    IMPORTANT: Respect the structure of wiki. If you don't know how to update it or need additional information, ask for more information
+    IMPORTANT: You MUST Strictly Respect Wiki structure. If you don't know how to update it or need additional information, ask for more information
     IMPORTANT: Before editing any file or creating new folders, make sure it exists. If the file already exist, read it
      to gather existing information and update them. Avoid deleting content inside, rather update it by adding a 
      [DATETIME] - EDIT: tag.
