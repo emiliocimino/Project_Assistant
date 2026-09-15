@@ -224,7 +224,6 @@ if __name__ == "__main__":
     if os.getenv("GRADIO_AUTH"):
         username = os.getenv("GRADIO_USERNAME", "gradio")
         pwd = os.getenv("GRADIO_PASSWORD", "gradio")
-        logger.info(f"Auth is: {username}, {pwd}")
         auth = [(username, pwd)]
 
     ui.launch(**LAUNCH_STYLE, auth=auth)
