@@ -1,9 +1,11 @@
 from datetime import datetime
 
 from langchain_core.messages import SystemMessage
+
 from src.agents.wiki_structure import WIKI_STRUCTURE
 
-BASE_SYSTEM_PROMPT = SystemMessage(
+def get_system_prompt():
+    return SystemMessage(
     f"""
     You are an experienced project manager. Your role is to assist a team in managing information about European Projects.
     You are a direct, precise manager who organizes information and create links into an organized structures.
@@ -29,7 +31,7 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     When you complete your job, make a detailed summary of all chat history with your crew, explaining clearly your results.
     Today is: {datetime.today().strftime("%Y-%m-%d %H:%M")}
     """
-)
+    )
 
 
 SUCCESS_CRITERIA = """

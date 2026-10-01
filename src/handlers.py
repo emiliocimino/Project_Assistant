@@ -3,12 +3,13 @@ import html
 import os
 import tempfile
 import uuid
+from pathlib import Path
 
 import gradio as gr
 from markitdown import MarkItDown
-from pathlib import Path
 from PyPDF2 import PdfReader, PdfWriter
 
+from files import copy_to_sources, page_pdf_file
 from src import DATA_DIR
 from src.agents.master.master import WikiAgent
 from src.memory.manager import delete_thread, list_threads, load_history
@@ -109,14 +110,7 @@ def pre_send_message(message, history):
 
 
 async def send_message(agent, message, history):
-    """Wired to the chat textbox/button. Which agent method gets called
-    depends on the mode switch: Ask mode is framed as read-only (agent.ask),
-    Edit mode allows the same box to create or update wiki files directly,
-    e.g. quick notes (agent.enrich). Both still go through the same
-    HumanInTheLoopMiddleware for actual file edits/moves either way; the
-    difference is the success-criteria framing given to the model, not a
-    hard permission wall.
-
+    """Wired to the chat textbox/button. Sends a request to the master agent
     History is not passed entirely due to message mismatch
     """
     if agent is None or not message:
@@ -134,13 +128,8 @@ async def send_message(agent, message, history):
     return history, gr.update(visible=paused), gr.update(visible=paused), agent, ""
 
 
-def start_enrich_ui(pdf_file, history):
+def start_file_upload(pdf_file, history):
     """Runs the instant the file lands, before any PDF processing starts.
-
-    Locks the ask box and upload control. Locking matters, not just
-    cosmetics: ask()/enrich() drive the same LangGraph thread_id, and letting
-    a message fire into the graph while an enrich() run is mid-flight on the
-    same thread is a race, not a supported concurrent use of the checkpointer.
     """
 
     if pdf_file is None:
@@ -151,38 +140,15 @@ def start_enrich_ui(pdf_file, history):
             gr.update(interactive=True),
         )
 
-    filename = os.path.basename(pdf_file).split("/")[-1].replace(" ", "_")
+    filename = os.path.basename(pdf_file)
     gr.Info(f"Uploading {filename}...")
-
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        md_converter = MarkItDown()
-        list_names = []
-        tmp = Path(tmp_dir)
-        with open(pdf_file, "rb") as f:
-            reader = PdfReader(f)
-            for i in range(len(reader.pages)):
-                page_name = f"page_{i}_{filename}"
-                composite_name = tmp / page_name
-                output_name = DATA_DIR / "sources" / page_name.replace(".pdf", ".md")
-                if not os.path.isfile(output_name):
-                    output = PdfWriter()
-                    output.add_page(reader.pages[i])
-                    with open(composite_name, "wb") as outputStream:
-                        output.write(outputStream)
-
-                    markdown = md_converter.convert(composite_name).markdown
-                    output_name.write_text(
-                        markdown,
-                        encoding="utf-8"
-                    )
-                list_names.append(str(output_name))
+    copy_to_sources(pdf_file)
+    pages_path = page_pdf_file(pdf_file)
 
     uploading_message = (
         f"{filename} Uploaded\nUpdate the wiki, making sure to avoid complete overwriting.\nHere the list of files:\n\n"
-        + "\n".join(list_names)
+        + "\n".join(pages_path)
     )
-
-    filename = os.path.basename(pdf_file)
 
     history = history + [
         {"role": "user", "content": uploading_message},
@@ -201,7 +167,7 @@ def start_enrich_ui(pdf_file, history):
     )
 
 
-async def enrich_file(agent, pdf_file, history, uploading_message):
+async def file_upload(agent, pdf_file, history, uploading_message):
     """Runs the actual PDF processing and calls WikiAgent.enrich."""
     if agent is None or pdf_file is None:
         return (
@@ -215,7 +181,7 @@ async def enrich_file(agent, pdf_file, history, uploading_message):
     return await send_message(agent, uploading_message, history)
 
 
-def finish_enrich_ui():
+def finish_file_upload():
     """Unlocks the controls once enrich_file has returned, and clears the upload
     slot so a repeat drop of the same file re-triggers the .upload() event."""
     return gr.update(value=None, interactive=True), gr.update(interactive=True)

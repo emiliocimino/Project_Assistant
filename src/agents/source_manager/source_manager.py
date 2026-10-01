@@ -9,7 +9,7 @@ from langchain_openai import ChatOpenAI
 from src import DATA_DIR
 from src.agents.mcp import get_filtered_tools
 from src.agents.middlewares import LogToolUsage, OverwriteGuardrail, TolerateToolErrors
-from src.agents.source_manager.system_prompt import BASE_SYSTEM_PROMPT
+from src.agents.source_manager.system_prompt import get_system_prompt
 
 load_dotenv(override=True)
 MODEL_NAME = os.getenv("MODEL_NAME")
@@ -22,7 +22,7 @@ MODEL = ChatOpenAI(model=MODEL_NAME, base_url=URL, api_key=API_KEY)
 
 source_manager_agent = create_agent(
     model=MODEL,
-    system_prompt=BASE_SYSTEM_PROMPT,
+    system_prompt=get_system_prompt(),
     tools=asyncio.run(get_filtered_tools(str(DATA_DIR))),
     middleware=[
         TodoListMiddleware(),

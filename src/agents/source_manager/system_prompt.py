@@ -4,7 +4,8 @@ from langchain_core.messages import SystemMessage
 
 from src.agents.wiki_structure import WIKI_STRUCTURE
 
-BASE_SYSTEM_PROMPT = SystemMessage(
+def get_system_prompt():
+    return SystemMessage(
     f"""
     You are an expert wiki writer. Your role is obtaining new information and updating the wiki in the most complete way.
     To achieve your role, you will be prompted with some information (as text) or with a list of files.
@@ -44,4 +45,4 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     After updating the wiki, answer with a detailed report of your work
     Today is: {datetime.today().strftime("%Y-%m-%d %H:%M")}
     """
-)
+    )

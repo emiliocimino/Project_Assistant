@@ -5,13 +5,13 @@ import os
 import gradio as gr
 from dotenv import load_dotenv
 
-from src import DATA_DIR
+from files import setup_structure
 from src.handlers import (
     approve,
     cancel_delete,
     confirm_delete,
-    enrich_file,
-    finish_enrich_ui,
+    file_upload,
+    finish_file_upload,
     free_resources,
     new_conversation,
     open_delete_modal,
@@ -21,7 +21,7 @@ from src.handlers import (
     render_todos,
     resume_conversation,
     send_message,
-    start_enrich_ui,
+    start_file_upload,
     watch_todos,
 )
 from src.styles import CSS, HEAD, THEME
@@ -196,14 +196,14 @@ with gr.Blocks(title="Wiki Agent") as ui:
     # 3) Upload button (Edit mode only) calling "enrich" as soon as a file is
     # submitted. Three stages: announce + lock, do the work, unlock + clear + refresh.
     pdf_upload.upload(
-        start_enrich_ui,
+        start_file_upload,
         [pdf_upload, chatbot],
         [chatbot, pdf_upload, ask_button, pending_message],
     ).then(
-        enrich_file,
+        file_upload,
         [agent_state, pdf_upload, chatbot, pending_message],
         [chatbot, approve_button, reject_button, agent_state, pending_message],
-    ).then(finish_enrich_ui, None, [pdf_upload, ask_button]).then(
+    ).then(finish_file_upload, None, [pdf_upload, ask_button]).then(
         refresh_sessions, None, [session_list]
     )
 
@@ -212,13 +212,8 @@ if __name__ == "__main__":
     from loguru import logger
     load_dotenv(override=True)
 
-    if not os.path.isdir(DATA_DIR):
-        os.mkdir(DATA_DIR)
-    if not os.path.isdir(DATA_DIR / "wiki"):
-        os.mkdir(DATA_DIR / "wiki")
-        os.mkdir(DATA_DIR / "sources")
-
     logger.info("Starting application...")
+    setup_structure()
 
     auth=None
     if os.getenv("GRADIO_AUTH"):

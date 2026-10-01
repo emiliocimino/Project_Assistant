@@ -4,8 +4,6 @@ import aiosqlite
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
-    HumanInTheLoopMiddleware,
-    ModelCallLimitMiddleware,
     TodoListMiddleware,
 )
 from langchain_openai import ChatOpenAI
@@ -14,7 +12,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command
 
 from src import DATA_DIR
-from src.agents.master.system_prompt import BASE_SYSTEM_PROMPT, SUCCESS_CRITERIA
+from src.agents.master.system_prompt import SUCCESS_CRITERIA, get_system_prompt
 from src.agents.master.tools import get_tools
 from src.agents.mcp import EvaluatorOutput, McpSessions, get_mcp_tools_and_sessions
 from src.agents.middlewares import (
@@ -23,7 +21,6 @@ from src.agents.middlewares import (
 )
 from src.memory.manager import get_sqlite_connection
 
-load_dotenv(override=True)
 MODEL_NAME = os.getenv("MODEL_NAME")
 URL = os.getenv("API_URL")
 API_KEY = os.getenv("API_KEY")
@@ -69,7 +66,7 @@ class WikiAgent:
         graph = create_agent(
             model=model,
             tools=tools,
-            system_prompt=BASE_SYSTEM_PROMPT,
+            system_prompt=get_system_prompt(),
             middleware=[
                 TodoListMiddleware(),
                 TolerateToolErrors(),

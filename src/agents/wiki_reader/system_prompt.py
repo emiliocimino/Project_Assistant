@@ -1,9 +1,12 @@
 from datetime import datetime
 
 from langchain_core.messages import SystemMessage
+
 from src.agents.wiki_structure import WIKI_STRUCTURE
 
-BASE_SYSTEM_PROMPT = SystemMessage(
+
+def get_system_prompt():
+    return SystemMessage(
     f"""
     You are an expert wiki searcher. You role is to answer a query in the most complete way.
     To do it, search all possible references to the query.
@@ -22,4 +25,4 @@ BASE_SYSTEM_PROMPT = SystemMessage(
     After gathering all information needed, answer with a detailed summary of every information
     Today is: {datetime.today().strftime("%Y-%m-%d %H:%M")}
     """
-)
+    )
