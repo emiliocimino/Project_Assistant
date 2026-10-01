@@ -1,17 +1,12 @@
 import asyncio
 import html
 import os
-import tempfile
 import uuid
-from pathlib import Path
 
 import gradio as gr
-from markitdown import MarkItDown
-from PyPDF2 import PdfReader, PdfWriter
 
-from files import copy_to_sources, page_pdf_file
-from src import DATA_DIR
 from src.agents.master.master import WikiAgent
+from src.files import copy_to_sources, page_pdf_file
 from src.memory.manager import delete_thread, list_threads, load_history
 
 STATUS_LABEL = {"pending": "Open", "in_progress": "In progress", "completed": "Done"}
