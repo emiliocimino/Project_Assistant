@@ -3,7 +3,7 @@ import os
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain.agents.middleware import ModelCallLimitMiddleware, TodoListMiddleware
+from langchain.agents.middleware import TodoListMiddleware
 from langchain_openai import ChatOpenAI
 
 from src import WIKI_DIR
@@ -34,7 +34,6 @@ wiki_reader_agent = create_agent(
     tools=asyncio.run(get_filtered_tools(str(WIKI_DIR), tool_list)),
     middleware=[
         TodoListMiddleware(),
-        ModelCallLimitMiddleware(run_limit=20),
         LogToolUsage("Wiki Reader"),
         TolerateToolErrors(),
     ],
