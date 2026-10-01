@@ -4,9 +4,9 @@ import shutil
 from markitdown import MarkItDown
 from PyPDF2 import PdfReader, PdfWriter
 
-from src import DATA_DIR, SOURCE_DIR, WIKI_DIR
+from src import DATA_DIR, SOURCES_DIR, WIKI_DIR
 
-PAGES_DIR = SOURCE_DIR / "pages"
+PAGES_DIR = SOURCES_DIR / "pages"
 
 
 def setup_structure():
@@ -14,8 +14,8 @@ def setup_structure():
         os.mkdir(DATA_DIR)
     if not os.path.isdir(WIKI_DIR):
         os.mkdir(WIKI_DIR)
-    if not os.path.isdir(SOURCE_DIR):
-        os.mkdir(SOURCE_DIR)
+    if not os.path.isdir(SOURCES_DIR):
+        os.mkdir(SOURCES_DIR)
     if not os.path.isdir(PAGES_DIR):
         os.mkdir(PAGES_DIR)
 
@@ -24,7 +24,7 @@ def get_file_name(full_path: str):
 
 def copy_to_sources(file):
     filename = get_file_name(file)
-    dest_path = SOURCE_DIR / filename
+    dest_path = SOURCES_DIR / filename
     shutil.copy(file, dest_path)
 
 def page_pdf_file(pdf_file):
