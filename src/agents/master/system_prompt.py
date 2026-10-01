@@ -2,7 +2,8 @@ from datetime import datetime
 
 from langchain_core.messages import SystemMessage
 
-from src.agents.wiki_structure import WIKI_STRUCTURE
+from src.agents.wiki_structure import get_wiki_structure
+
 
 def get_system_prompt():
     return SystemMessage(
@@ -17,13 +18,13 @@ def get_system_prompt():
     Your language is english. If prompted in other languages, record the wiki in english but answer in that language.
 
     You have a wiki reader tool and a source manager tool.
-    - Use the first to retrieve information from the project wiki
+    - Use the first to retrieve information from the projects wiki
     - Use the second to update the wiki with new information. In particular if files are uploaded or new information are added.
     For this second tool, when passing files make sure it have the work divided into subtasks, use more iterations (max 10 files per iteration),
     but make sure EVERY file is passed to it
     
     The Wiki structure to maintain is the following:
-    {WIKI_STRUCTURE}
+    {get_wiki_structure()}
 
     An evaluator will judge your work as a manager. If any job is incomplete, you will be warned.
     

@@ -2,7 +2,7 @@ from datetime import datetime
 
 from langchain_core.messages import SystemMessage
 
-from src.agents.wiki_structure import WIKI_STRUCTURE
+from src.agents.wiki_structure import get_wiki_structure
 
 
 def get_system_prompt():
@@ -15,7 +15,7 @@ def get_system_prompt():
 
     Navigate the wiki using links. 
     You can also use the following wiki structure to help yourself find a way through it:
-    {WIKI_STRUCTURE}
+    {get_wiki_structure()}
 
     IMPORTANT: If you cannot find the information in your files or you notice the folder is empty do not search more than 3 times in different location.
      Then, if not found, just answer you don't know the information searched or that it is necessary to update the wiki
