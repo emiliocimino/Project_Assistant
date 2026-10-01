@@ -5,7 +5,7 @@ import os
 import gradio as gr
 from dotenv import load_dotenv
 
-from files import setup_structure
+from src.files import setup_structure
 from src.handlers import (
     approve,
     cancel_delete,
