@@ -14,7 +14,7 @@ class TolerateToolErrors(AgentMiddleware):
         try:
             return await handler(request)
         except Exception as error:
-            logger.error(f"Tool call failed: {error}. Try another approach.")
+            logger.info(f"Tool call failed: {error}. Try another approach.")
             return ToolMessage(
                 content=f"That tool call failed: {error}. Try another approach.",
                 tool_call_id=request.tool_call["id"],
