@@ -5,7 +5,6 @@ from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import ToolMessage
 from loguru import logger
 
-
 sliding_window = []
 class SafeguardRepetitiveCalls(AgentMiddleware):
     """Safe guardrail to avoid repetitive tool call"""
@@ -21,6 +20,7 @@ class SafeguardRepetitiveCalls(AgentMiddleware):
         sliding_window.append(current_call)
         if len(sliding_window) > 5:
             sliding_window.pop(0)
+        return await handler(request)
 
 
 class TolerateToolErrors(AgentMiddleware):
