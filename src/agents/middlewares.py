@@ -6,6 +6,23 @@ from langchain_core.messages import ToolMessage
 from loguru import logger
 
 
+sliding_window = []
+class SafeguardRepetitiveCalls(AgentMiddleware):
+    """Safe guardrail to avoid repetitive tool call"""
+
+    async def awrap_tool_call(self, request, handler):
+        current_call = (request.tool_call["name"], request.tool_call["args"])
+        if sliding_window.count(current_call) > 2:
+            return ToolMessage(
+                content="You already called the same tool twice with same arguments. Don't do it again",
+                tool_call_id=request.tool_call["id"],
+            )
+
+        sliding_window.append(current_call)
+        if len(sliding_window) > 5:
+            sliding_window.pop(0)
+
+
 class TolerateToolErrors(AgentMiddleware):
     """Hand tool failures back to the model as a message so it can recover, rather than
     crashing the run. Tools that touch the outside world, like a browser, fail now and then."""

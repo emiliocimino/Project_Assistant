@@ -9,7 +9,12 @@ from langchain_openai import ChatOpenAI
 from src import DATA_DIR
 from src.agents.custom_tools import append_to_log
 from src.agents.mcp import get_filtered_tools
-from src.agents.middlewares import LogToolUsage, OverwriteGuardrail, TolerateToolErrors
+from src.agents.middlewares import (
+    LogToolUsage,
+    OverwriteGuardrail,
+    SafeguardRepetitiveCalls,
+    TolerateToolErrors,
+)
 from src.agents.source_manager.system_prompt import get_system_prompt
 
 load_dotenv(override=True)
@@ -30,6 +35,7 @@ source_manager_agent = create_agent(
     middleware=[
         TodoListMiddleware(),
         OverwriteGuardrail(str(DATA_DIR)),
+        SafeguardRepetitiveCalls(),
         LogToolUsage("Source Manager"),
         TolerateToolErrors(),
     ],
