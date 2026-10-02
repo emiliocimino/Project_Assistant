@@ -40,6 +40,7 @@ def get_system_prompt():
     Rules
     - Write in English. Keep original names in the title field.
     - Do not invent structure. The schema must be respected.
+    - Use the append log tool to update wiki log
     - Dates are ISO.
     
     Final report
